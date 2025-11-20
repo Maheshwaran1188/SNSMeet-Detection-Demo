@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Deepfake Detection Demo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Real-Time Meeting Integrity Check</h1>
+        <p>Using TensorFlow.js to detect facial manipulation instantly.</p>
+
+        <div class="video-container">
+            <video id="webcam" autoplay playsinline></video>
+            <canvas id="detection-canvas" style="display: none;"></canvas>
+        </div>
+
+        <div id="status" class="status-box">⏳ Initializing Webcam and Models...</div>
+
+        <div class="action-buttons">
+            <a href="host.html" class="button primary"><i class="fas fa-video"></i> Host Meeting (Start Deepfake Analysis)</a>
+            <a href="meeting.html" class="button secondary"><i class="fas fa-users"></i> Join Meeting (View-Only)</a>
+        </div>
+
+        <div class="invite-box" style="margin-top: 30px; padding: 20px; background: #333; border-radius: 8px;">
+            <h2><i class="fas fa-user-plus"></i> Invite Participants (Simulated)</h2>
+            <input type="text" id="participantName" placeholder="Enter participant name" style="padding: 10px; margin-right: 10px; border-radius: 4px; border: 1px solid #555; background: #222; color: white;">
+            <button id="inviteButton" style="padding: 10px 15px; background-color: var(--color-primary); color: white; border: none; border-radius: 4px; cursor: pointer;">Invite to Meet</button>
+            <p style="margin-top: 10px;">Total Invited: <span id="invitedCount">0</span></p>
+        </div>
+
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
