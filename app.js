@@ -20,15 +20,13 @@ let peer = null;
 let localStream = null;
 
 // --- CRITICAL FIX: Robust STUN/TURN Server Configuration ---
-// These servers help peers find each other through firewalls/NATs (Network Address Translation).
+// These servers help peers find each other through firewalls/NATs.
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:global.stun.twilio.com:3478' }
-        // Note: The public PeerJS cloud includes a free TURN server, 
-        // which the STUN list above helps find and use.
     ]
 };
 
@@ -44,7 +42,6 @@ function getUrlMeetingID() {
 async function setupWebcam(videoTargetElement) {
     if (statusElement) statusElement.innerHTML = "⏳ Requesting webcam access...";
     try {
-        // Request video and audio
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localStream = stream;
         videoTargetElement.srcObject = localStream;
@@ -62,7 +59,6 @@ async function setupWebcam(videoTargetElement) {
 
 // 2. Host Session Logic
 function handleHostSession() {
-    // Generate a new ID if not present in URL
     const hostID = getUrlMeetingID() || Math.random().toString(36).substring(2, 9).toUpperCase();
     
     // Initialize Peer with STUN/TURN config and a unique path
@@ -87,12 +83,9 @@ function handleHostSession() {
     // Host receives a call from a participant
     peer.on('call', call => {
         if (statusElement) statusElement.innerHTML = `<span style="color:#4CAF50;">📞 Incoming Participant Call from ${call.peer}...</span>`;
-        
-        // Host answers the call and sends their local stream (their webcam)
         call.answer(localStream);
         
         call.on('stream', remoteStream => {
-            // Display the remote participant's stream in the 'participant-video' element
             if(participantVideo) {
                 participantVideo.srcObject = remoteStream;
                 participantVideo.play();
@@ -111,7 +104,6 @@ function handleHostSession() {
 function connectToHost(hostID) {
     if (!hostID) return;
 
-    // Transition to meeting room
     if (joinScreen && meetingRoom) {
         joinScreen.style.display = 'none';
         meetingRoom.style.display = 'block';
@@ -133,7 +125,6 @@ function connectToHost(hostID) {
     peer.on('open', () => {
         if (statusElement) statusElement.innerHTML = `<span style="color:#4CAF50;">📞 Calling Host: ${hostID}...</span>`;
         
-        // Participant initiates the call to the host, sending their local stream
         const call = peer.call(hostID, localStream);
 
         call.on('stream', remoteStream => {
@@ -149,7 +140,6 @@ function connectToHost(hostID) {
             console.error("Call Error:", err);
             alert("Meeting not found or the host session is inactive/closed. Check the ID."); 
             if (statusElement) statusElement.innerHTML = `<span style="color:#FF3333;">❌ Call Failed or Host Offline.</span>`;
-            // Re-show join screen on failure
             if (joinScreen && meetingRoom) {
                 joinScreen.style.display = 'block';
                 meetingRoom.style.display = 'none';
@@ -166,7 +156,6 @@ function connectToHost(hostID) {
 // 4. Initialization
 async function init() {
     
-    // Select the correct video element to attach the webcam stream to
     const videoToSetup = isHost ? hostVideoElement : localVideoElement;
     
     if (!videoToSetup) {
