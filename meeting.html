@@ -3,117 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNSMeet | Join Session</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Join Meeting - Deepfake Detector</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        .join-container {
-            max-width: 500px;
-            margin: 150px auto;
-            padding: 40px;
-            background-color: var(--color-surface);
-            border-radius: 12px;
-            text-align: center;
-        }
-        .join-container h1 {
-            color: var(--color-primary);
-            margin-bottom: 20px;
-        }
-        .join-input {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            border: 1px solid #555;
-            background: #222;
-            color: white;
-            text-align: center;
-            font-size: 1.2em;
-        }
-        .join-button {
-            width: 100%;
-            padding: 15px;
-            background-color: var(--color-success);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.1em;
-            font-weight: 700;
-        }
-        .join-button:hover {
-            background-color: #388e3c;
-        }
-        .video-placeholder {
-            max-width: 900px;
-            height: 450px;
-            background-color: #0b0c10;
-            border-radius: 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #aaa;
-            margin: 20px auto;
-            overflow: hidden; 
-            position: relative;
-        }
-        .video-placeholder video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-    </style>
 </head>
 <body>
-
-    <div id="join-screen" class="join-container">
-        <h1><i class="fas fa-door-open"></i> Join Meeting</h1>
-        <p>Enter the meeting ID or check your invite link.</p>
+    <div class="container participant-layout">
         
-        <input type="text" id="meetingIdInput" class="join-input" placeholder="Meeting ID (e.g., 1A2B3C4D)">
-        <button id="joinButton" class="join-button">Join Now</button>
-        <p style="margin-top: 20px;"><a href="index.html" style="color:var(--color-secondary);">Go back to home</a></p>
-    </div>
-
-    <div id="meeting-room" style="display:none; text-align:center;">
-        <h1 style="margin-top: 50px;">Welcome to Meeting: <span id="currentMeetingIdDisplay" style="color: var(--color-secondary);"></span></h1>
-        
-        <p id="status" class="detection-status" style="margin-bottom: 15px;">⏳ Initializing systems...</p>
-        
-        <div class="video-grid" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-            
-            <div id="host-video-container" class="video-placeholder" style="width: 400px; height: 300px;">
-                <video id="webcam" autoplay playsinline></video>
-                <p style="z-index: 1;">Host's Video Feed</p>
-            </div>
-            
-            <div id="local-video-container" class="video-placeholder" style="width: 400px; height: 300px;">
-                <video id="localWebcam" autoplay playsinline muted></video>
-                <p style="z-index: 1;">Your Video Feed</p>
-            </div>
+        <div id="join-screen" class="join-screen">
+            <h1>Join Meeting</h1>
+            <input type="text" id="meetingIdInput" placeholder="Enter Meeting ID">
+            <button id="joinButton">Join</button>
         </div>
-        
-        <div class="meeting-controls" style="position:static; margin-top:20px; margin-bottom: 50px;">
-            <div class="control-group">
-                <button id="mic-toggle-btn" class="on"><i class="fas fa-microphone"></i></button>
-                <button id="cam-toggle-btn" class="on"><i class="fas fa-video"></i></button>
-                <button><i class="fas fa-desktop"></i> Screen Share</button>
-                <button><i class="fas fa-users"></i> Participants</button>
-                <button><i class="fas fa-comment-alt"></i> Chat</button>
-            </div>
-            
-            <div class="control-group">
-                <button class="end-call" onclick="window.location.href='index.html'"><i class="fas fa-phone-slash"></i> Leave Meeting</button>
-            </div>
+
+        <div id="meeting-room" class="meeting-room" style="display:none;">
+            <header>
+                <h1>Meeting Room</h1>
+                <p>Connected to ID: <span id="currentMeetingIdDisplay">--</span></p>
+            </header>
+
+            <main class="main-content">
+                <div class="main-video-area">
+                    <video id="webcam" autoplay playsinline></video>
+                </div>
+
+                <div class="sidebar">
+                    <h2>Your Status</h2>
+                    <p id="status" class="status-message">Connecting...</p>
+                    
+                    <div class="local-preview">
+                        <h3>Your Webcam (Local)</h3>
+                        <video id="localWebcam" autoplay playsinline muted></video>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
-    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script> 
-    <script src="app.js"></script> 
-    <script src="main.js"></script> 
+    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
