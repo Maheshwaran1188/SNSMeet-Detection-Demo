@@ -1,39 +1,50 @@
-// --- Core DOM Elements (IDs must match HTML) ---
-const hostVideoElement = document.getElementById('webcam'); 
-const localVideoElement = document.getElementById('localWebcam'); 
-const participantVideo = document.getElementById('participant-video'); 
+// --- Core DOM Elements (IDs must match your HTML) ---
+const hostVideoElement = document.getElementById('webcam'); // Host's local video / Participant's remote host video
+const localVideoElement = document.getElementById('localWebcam'); // Participant's local video
+const participantVideo = document.getElementById('participant-video'); // Host's remote participant video
+
+// UI Elements
 const statusElement = document.getElementById('status');
-const meetingIdDisplay = document.getElementById('meeting-id-display'); 
-const currentMeetingIdDisplay = document.getElementById('currentMeetingIdDisplay'); 
+const meetingIdDisplay = document.getElementById('meeting-id-display');
+const currentMeetingIdDisplay = document.getElementById('currentMeetingIdDisplay');
 const joinButton = document.getElementById('joinButton');
 const meetingIdInput = document.getElementById('meetingIdInput');
 const joinScreen = document.getElementById('join-screen');
 const meetingRoom = document.getElementById('meeting-room');
 
+
+// Determine if we are the host based on UI elements
 const isHost = meetingIdDisplay !== null;
+
 let peer = null;
 let localStream = null;
 
-// --- CRITICAL FIX: Robust STUN Server Configuration ---
+// --- CRITICAL FIX: Robust STUN/TURN Server Configuration ---
+// These servers help peers find each other through firewalls/NATs (Network Address Translation).
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:global.stun.twilio.com:3478' }
+        // Note: The public PeerJS cloud includes a free TURN server, 
+        // which the STUN list above helps find and use.
     ]
 };
 
 
 // --- UTILITY FUNCTIONS ---
+
 function getUrlMeetingID() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('id');
 }
 
+// 1. Setup Webcam Feed
 async function setupWebcam(videoTargetElement) {
     if (statusElement) statusElement.innerHTML = "⏳ Requesting webcam access...";
     try {
+        // Request video and audio
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localStream = stream;
         videoTargetElement.srcObject = localStream;
@@ -51,14 +62,15 @@ async function setupWebcam(videoTargetElement) {
 
 // 2. Host Session Logic
 function handleHostSession() {
+    // Generate a new ID if not present in URL
     const hostID = getUrlMeetingID() || Math.random().toString(36).substring(2, 9).toUpperCase();
     
-    // Peer initialization with unique path
+    // Initialize Peer with STUN/TURN config and a unique path
     peer = new Peer(hostID, {
         host: 'peerjs.com', 
         secure: true,      
         port: 443,         
-        path: '/snsmeet', // Unique path to improve server stability
+        path: '/snsmeet', // Unique path for better connection stability
         config: ICE_SERVERS,
         debug: 3
     });
@@ -72,11 +84,15 @@ function handleHostSession() {
         }
     });
 
+    // Host receives a call from a participant
     peer.on('call', call => {
         if (statusElement) statusElement.innerHTML = `<span style="color:#4CAF50;">📞 Incoming Participant Call from ${call.peer}...</span>`;
+        
+        // Host answers the call and sends their local stream (their webcam)
         call.answer(localStream);
         
         call.on('stream', remoteStream => {
+            // Display the remote participant's stream in the 'participant-video' element
             if(participantVideo) {
                 participantVideo.srcObject = remoteStream;
                 participantVideo.play();
@@ -87,7 +103,6 @@ function handleHostSession() {
 
     peer.on('error', err => {
         console.error("PeerJS Error (Host):", err);
-        // This is the error you are seeing. The STUN servers should resolve it.
         if (statusElement) statusElement.innerHTML = `<span style="color:#FF3333;">❌ Host Error: Lost connection to server. Check Console.</span>`;
     });
 }
@@ -96,6 +111,7 @@ function handleHostSession() {
 function connectToHost(hostID) {
     if (!hostID) return;
 
+    // Transition to meeting room
     if (joinScreen && meetingRoom) {
         joinScreen.style.display = 'none';
         meetingRoom.style.display = 'block';
@@ -104,12 +120,12 @@ function connectToHost(hostID) {
     if (currentMeetingIdDisplay) currentMeetingIdDisplay.innerText = hostID;
     if (statusElement) statusElement.innerHTML = `<span style="color:#4CAF50;">⏳ Initializing participant peer...</span>`;
 
-    // Peer initialization with unique path
-    peer = new Peer(undefined, {
+    // Initialize Peer with STUN/TURN config and a unique path
+    peer = new Peer(undefined, { // Undefined ID lets PeerJS assign a random one
         host: 'peerjs.com', 
         secure: true,      
         port: 443,         
-        path: '/snsmeet', // Unique path to improve server stability
+        path: '/snsmeet', // Unique path for better connection stability
         config: ICE_SERVERS,
         debug: 3
     });
@@ -117,9 +133,11 @@ function connectToHost(hostID) {
     peer.on('open', () => {
         if (statusElement) statusElement.innerHTML = `<span style="color:#4CAF50;">📞 Calling Host: ${hostID}...</span>`;
         
+        // Participant initiates the call to the host, sending their local stream
         const call = peer.call(hostID, localStream);
 
         call.on('stream', remoteStream => {
+            // Display the stream received from the host in the main 'webcam' element
             if (hostVideoElement) {
                 hostVideoElement.srcObject = remoteStream;
                 hostVideoElement.play();
@@ -131,6 +149,7 @@ function connectToHost(hostID) {
             console.error("Call Error:", err);
             alert("Meeting not found or the host session is inactive/closed. Check the ID."); 
             if (statusElement) statusElement.innerHTML = `<span style="color:#FF3333;">❌ Call Failed or Host Offline.</span>`;
+            // Re-show join screen on failure
             if (joinScreen && meetingRoom) {
                 joinScreen.style.display = 'block';
                 meetingRoom.style.display = 'none';
@@ -147,6 +166,7 @@ function connectToHost(hostID) {
 // 4. Initialization
 async function init() {
     
+    // Select the correct video element to attach the webcam stream to
     const videoToSetup = isHost ? hostVideoElement : localVideoElement;
     
     if (!videoToSetup) {
@@ -161,6 +181,7 @@ async function init() {
             handleHostSession();
         } 
         else {
+            // Participant login flow
             const urlId = getUrlMeetingID();
             if (urlId) {
                 if (meetingIdInput) meetingIdInput.value = urlId;
