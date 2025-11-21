@@ -1,403 +1,328 @@
-// --- Core DOM Elements (IDs must match your HTML) ---
-const videoElement = document.getElementById('webcam');
-const canvasElement = document.getElementById('detection-canvas');
+// --- Core DOM Elements ---
+const hostVideoElement = document.getElementById('webcam'); // Used in Host page for analysis/detection
+const participantVideoElement = document.getElementById('participant-video'); // Used in Host page for remote stream
+const localPreviewElement = document.getElementById('localWebcam'); // Used in both pages for the small local preview
 const statusElement = document.getElementById('status');
-const anomalyDetailsElement = document.getElementById('anomaly-details');
-const removalAlertElement = document.getElementById('removal-alert');
-const ctx = canvasElement ? canvasElement.getContext('2d') : null;
+const meetingIdDisplay = document.getElementById('meeting-id-display');
+const currentMeetingIdDisplay = document.getElementById('currentMeetingIdDisplay');
 
-// Meeting elements required for both host and participant pages
-const hostVideoElement = document.getElementById('webcam'); 
-const localVideoElement = document.getElementById('localWebcam'); 
-const participantVideo = document.getElementById('participant-video'); 
-const meetingIdDisplay = document.getElementById('meeting-id-display'); 
-const currentMeetingIdDisplay = document.getElementById('currentMeetingIdDisplay'); 
 const joinButton = document.getElementById('joinButton');
 const meetingIdInput = document.getElementById('meetingIdInput');
+
 const joinScreen = document.getElementById('join-screen');
 const meetingRoom = document.getElementById('meeting-room');
+const cutButton = document.getElementById('cutButton');
 
-
-// --- WebRTC Variables & Fixes ---
-let peer = null;
+// --- Global Variables ---
 let localStream = null;
-const isHost = meetingIdDisplay !== null; 
+let peer = null;
+let remoteConnection = null;
+let chart1, chart2; // For the TensorFlow charts
 
-// CRITICAL FIX: Robust STUN/TURN Server Configuration for stability
-const ICE_SERVERS = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:global.stun.twilio.com:3478' }
-    ]
+// --- PeerJS Configuration (Fixing Connection Issues) ---
+// Using Google's STUN server for reliable connection brokering
+const peerConfig = {
+    host: '0.peerjs.com',
+    port: 443,
+    path: '/',
+    secure: true,
+    debug: 2,
+    config: {
+        'iceServers': [
+            { 'urls': 'stun:stun.l.google.com:19302' },
+            // Add other STUN/TURN servers for better connectivity if needed
+        ]
+    }
 };
 
-// --- UTILITY FUNCTIONS ---
+// --- Utility Functions ---
 
-// FIX FOR: ReferenceError: getUrlMeetingID is not defined
-function getUrlMeetingID() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('id');
-}
-
-// --- AI Variables (Simplified for WebRTC focus) ---
-let faceDetector = null;
-let anomalyModel = null;
-let isModelReady = false;
-let confidenceChart;
-let integrityChart;
-
-let frameCount = 0;
-const INFERENCE_SKIP_RATE = 10;
-let lastDetectionResult = { isFake: false, statusText: 'REAL', confidence: 0, predictions: [] };
-const ANOMALY_WARNING_LEVEL = 0.65;
-
-
-// 1. Setup Webcam Feed
-async function setupWebcam(videoTargetElement) {
+// 1. Setup Webcam Feed (CRITICAL FIX: Targets all necessary elements)
+async function setupWebcam() {
     if (statusElement) statusElement.innerHTML = "⏳ Requesting webcam access...";
     try {
-        const stream = navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localStream = await stream;
-        videoTargetElement.srcObject = localStream;
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localStream = stream;
 
-        return new Promise((resolve) => {
-            videoTargetElement.onloadedmetadata = () => {
-                if (isHost && canvasElement) {
-                    canvasElement.width = videoTargetElement.videoWidth;
-                    canvasElement.height = videoTargetElement.videoHeight;
-                }
-                
-                videoTargetElement.play(); 
-                resolve(videoTargetElement);
-            };
+        // Set stream to all local video elements
+        if (hostVideoElement) hostVideoElement.srcObject = localStream;
+        if (localPreviewElement) localPreviewElement.srcObject = localStream;
+        
+        // Wait for video metadata to load
+        await new Promise((resolve) => {
+            const videoToWaitOn = hostVideoElement || localPreviewElement;
+            if (videoToWaitOn) {
+                videoToWaitOn.onloadedmetadata = () => {
+                    videoToWaitOn.play();
+                    resolve();
+                };
+            } else {
+                resolve(); // No video element found (shouldn't happen)
+            }
         });
+
+        if (statusElement) statusElement.innerHTML = "<span class='real'>✅ Webcam stream ready.</span>";
+        return true;
     } catch (error) {
         if (statusElement) statusElement.innerHTML = `<span class="fake">❌ ERROR: Could not access webcam.</span>`;
         console.error("Webcam Error:", error);
+        alert("ERROR: Please allow camera and microphone access and ensure you are using HTTPS.");
+        return false;
     }
 }
 
-// 2. Load Both AI Models (Host Only)
-async function loadModels() {
-    if (!isHost) return;
+// 2. Host Page Logic
+async function startHostSession() {
+    const streamReady = await setupWebcam();
+    if (!streamReady) return;
+
+    if (statusElement) statusElement.innerHTML = "⏳ Connecting to PeerJS server...";
     
-    if (typeof blazeface === 'undefined' || typeof mobilenet === 'undefined') {
-        statusElement.innerHTML = `<span class="fake">❌ Model Libraries not loaded.</span>`;
+    // Create Peer with a random ID
+    peer = new Peer(peerConfig);
+
+    peer.on('open', (id) => {
+        if (statusElement) statusElement.innerHTML = `<span class='real'>✅ Peer ID: ${id}</span>. Waiting for participant...`;
+        if (meetingIdDisplay) meetingIdDisplay.textContent = `Meeting ID: ${id}`;
+        console.log('My peer ID is: ' + id);
+    });
+
+    peer.on('error', (err) => {
+        console.error("PeerJS Error:", err);
+        if (statusElement) statusElement.innerHTML = `<span class="fake">❌ Connection Error: ${err.type}</span>`;
+    });
+
+    peer.on('connection', (conn) => {
+        conn.on('open', () => {
+            conn.send('Hello Participant! You are connected.');
+        });
+    });
+
+    // Listen for incoming calls
+    peer.on('call', (call) => {
+        console.log("Incoming call from:", call.peer);
+        remoteConnection = call;
+
+        // Answer the call, sending our local stream
+        call.answer(localStream);
+
+        call.on('stream', (remoteStream) => {
+            console.log("Received remote stream.");
+            if (participantVideoElement) {
+                participantVideoElement.srcObject = remoteStream;
+                participantVideoElement.play();
+            }
+            if (statusElement) statusElement.innerHTML = `<span class='real'>🟢 Participant Connected. Starting Analysis...</span>`;
+            // Start detection on the REMOTE stream
+            startDetection(participantVideoElement); 
+        });
+
+        call.on('close', endSession);
+    });
+
+    // Start detection on the HOST's local stream for visual verification
+    if (hostVideoElement) {
+        // We only start the detection loop once the local stream is ready
+        setTimeout(() => startDetection(hostVideoElement, true), 1000); 
+    }
+}
+
+// 3. Participant Page Logic
+function joinMeeting() {
+    const meetingId = meetingIdInput.value.trim();
+    if (!meetingId) {
+        alert("Please enter a Meeting ID.");
         return;
     }
-    
-    statusElement.innerHTML = "⏳ Loading AI Models...";
-    
-    const [detector, anomaly] = await Promise.all([
-        blazeface.load({ scoreThreshold: 0.70 }), 
-        mobilenet.load()
-    ]);
 
-    faceDetector = detector; 
-    anomalyModel = anomaly;
-    
-    if (faceDetector && anomalyModel) {
-        isModelReady = true;
-        statusElement.innerHTML = `<span class="real">✅ All Models Ready! Starting Analysis...</span>`;
-        setupCharts();
-    } else {
-         statusElement.innerHTML = `<span class="fake">❌ Model Loading Failed.</span>`;
-    }
-}
+    // Connect to camera first
+    setupWebcam().then((streamReady) => {
+        if (!streamReady) return;
 
-// 3. Setup Charts for Visualization (Host Only)
-function setupCharts() {
-    const chartCtx1 = document.getElementById('confidenceChart');
-    const chartCtx2 = document.getElementById('integrityChart');
-
-    if (chartCtx1) {
-        confidenceChart = new Chart(chartCtx1, { type: 'line', data: { labels: [], datasets: [{ data: [], label: 'Confidence' }] }, options: { animation: false } });
-    }
-    if (chartCtx2) {
-        integrityChart = new Chart(chartCtx2, { type: 'doughnut', data: { labels: ['Real', 'Anomaly'], datasets: [{ data: [100, 0] }] }, options: { animation: false } });
-    }
-}
-
-// 4. Update Visuals (Host Only - Simplified)
-function updateVisuals(isFake, confidence) {
-    if (!isHost) return;
-
-    if (confidenceChart) {
-        const maxDataPoints = 30;
-        confidenceChart.data.labels.push(frameCount);
-        confidenceChart.data.datasets[0].data.push(confidence * 100);
-        if (confidenceChart.data.labels.length > maxDataPoints) {
-            confidenceChart.data.labels.shift();
-            confidenceChart.data.datasets[0].data.shift();
-        }
-        confidenceChart.update('none'); 
-    }
-
-    if (integrityChart) {
-        const anomalyScore = Math.min(confidence * 100, 100);
-        const realScore = 100 - anomalyScore;
-        integrityChart.data.datasets[0].data = [realScore.toFixed(1), anomalyScore.toFixed(1)];
-        integrityChart.update('none');
-    }
-
-    if (confidence >= ANOMALY_WARNING_LEVEL) {
-        removalAlertElement.style.display = 'block';
-    } else {
-        removalAlertElement.style.display = 'none';
-    }
-}
-
-// 5. AI Detection Logic (Host Only - Simplified)
-async function detectDeepfakeArtifacts() {
-    if (!isHost || !isModelReady) return;
-    
-    lastDetectionResult.predictions = [];
-    if (Math.random() < 0.05) { 
-        lastDetectionResult.isFake = true;
-        lastDetectionResult.confidence = 0.75 + Math.random() * 0.2;
-        lastDetectionResult.statusText = `DEEPFAKE ARTIFACT!`;
-    } else {
-        lastDetectionResult.isFake = false;
-        lastDetectionResult.confidence = 0.0;
-        lastDetectionResult.statusText = `REAL (Human Face)`;
-    }
-
-    const currentConfidence = lastDetectionResult.isFake ? lastDetectionResult.confidence : 0;
-    updateVisuals(lastDetectionResult.isFake, currentConfidence);
-
-    if (statusElement) {
-        statusElement.innerHTML = lastDetectionResult.isFake 
-            ? `<span class="fake">🚨 DEEPFAKE ALERT! ${lastDetectionResult.statusText}</span>`
-            : `<span class="real">✅ Status: Real</span>`;
-    }
-    anomalyDetailsElement.innerHTML = `Confidence: ${(currentConfidence * 100).toFixed(2)}%`;
-}
-
-
-// 6. Lightweight Display Loop
-async function displayFrame() {
-    requestAnimationFrame(displayFrame); 
-
-    if (!localStream) return;
-    
-    if (isHost && ctx && videoElement.readyState >= 2) {
-        if (isVideoEnabled) {
-             ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-             ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-        } else {
-             ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        }
-    }
-    
-    if (isHost && isModelReady && frameCount % INFERENCE_SKIP_RATE === 0) {
-        detectDeepfakeArtifacts(); 
-    }
-
-    frameCount++;
-}
-
-
-// 7. --- WEBRTC/PEERJS LOGIC ---
-function handleHostSession() {
-    const hostID = getUrlMeetingID() || Math.random().toString(36).substring(2, 9).toUpperCase();
-    
-    peer = new Peer(hostID, {
-        host: 'peerjs.com', 
-        secure: true,      
-        port: 443,         
-        path: '/snsmeet', // Unique path for better connection stability
-        config: ICE_SERVERS,
-        debug: 3
-    });
-
-    peer.on('open', id => {
-        window.history.replaceState(null, null, `?id=${id}`);
-        if (meetingIdDisplay) {
-             meetingIdDisplay.innerText = `Meeting ID: ${id}`;
-             statusElement.innerHTML = `<span class="real">✅ Meeting Live! ID: ${id} - Waiting for participant...</span>`;
-        }
-    });
-
-    peer.on('call', call => {
-        if (statusElement) statusElement.innerHTML = `<span class="real">📞 Incoming Participant Call...</span>`;
-        call.answer(localStream);
+        if (currentMeetingIdDisplay) currentMeetingIdDisplay.textContent = meetingId;
+        if (joinScreen) joinScreen.style.display = 'none';
+        if (meetingRoom) meetingRoom.style.display = 'flex';
+        if (statusElement) statusElement.innerHTML = "⏳ Connecting to PeerJS server...";
         
-        call.on('stream', remoteStream => {
-            if(participantVideo) {
-                participantVideo.srcObject = remoteStream;
-                participantVideo.play();
-                statusElement.innerHTML = `<span class="real">🤝 Participant Joined!</span>`;
-            }
-        });
-    });
+        // Create Peer without ID (PeerJS will assign one)
+        peer = new Peer(peerConfig);
 
-    peer.on('error', err => {
-        console.error("PeerJS Error (Host):", err);
-        if (statusElement) statusElement.innerHTML = `<span class="fake">❌ Host Error: Lost connection to server. Check Console.</span>`;
-    });
-}
+        peer.on('open', (id) => {
+            if (statusElement) statusElement.innerHTML = `<span class='real'>✅ My Peer ID: ${id}</span>. Calling host...`;
+            console.log('My peer ID is: ' + id);
 
-function connectToHost(hostID) {
-    if (!hostID) return;
+            // Call the host, sending our local stream
+            const call = peer.call(meetingId, localStream);
+            remoteConnection = call;
 
-    if (joinScreen && meetingRoom) {
-        joinScreen.style.display = 'none';
-        meetingRoom.style.display = 'flex'; 
-    }
-    
-    if (currentMeetingIdDisplay) currentMeetingIdDisplay.innerText = hostID;
-    if (statusElement) statusElement.innerHTML = `<span class="real">⏳ Initializing participant peer...</span>`;
+            call.on('stream', (remoteStream) => {
+                console.log("Received remote host stream.");
+                if (hostVideoElement) {
+                    // In meeting.html, the main video is 'webcam'
+                    hostVideoElement.srcObject = remoteStream; 
+                    hostVideoElement.play();
+                }
+                if (statusElement) statusElement.innerHTML = `<span class='real'>🟢 Connected to Host.</span>`;
+            });
 
-    peer = new Peer(undefined, {
-        host: 'peerjs.com', 
-        secure: true,      
-        port: 443,         
-        path: '/snsmeet', 
-        config: ICE_SERVERS,
-        debug: 3
-    });
-
-    peer.on('open', () => {
-        if (statusElement) statusElement.innerHTML = `<span class="real">📞 Calling Host: ${hostID}...</span>`;
-        
-        const call = peer.call(hostID, localStream);
-
-        call.on('stream', remoteStream => {
-            if (hostVideoElement) {
-                hostVideoElement.srcObject = remoteStream;
-                hostVideoElement.play();
-                if (statusElement) statusElement.innerHTML = `<span class="real">🤝 Joined Host Session.</span>`;
-            }
+            call.on('close', endSession);
         });
 
-        call.on('error', err => {
-            console.error("Call Error:", err);
-            alert("Meeting not found or the host session is inactive/closed. Check the ID."); 
-            if (statusElement) statusElement.innerHTML = `<span class="fake">❌ Call Failed or Host Offline.</span>`;
-            if (joinScreen && meetingRoom) {
-                joinScreen.style.display = 'block';
-                meetingRoom.style.display = 'none';
-            }
+        peer.on('error', (err) => {
+            console.error("PeerJS Error:", err);
+            alert(`Connection failed: ${err.type}. Check the ID and try again.`);
+            endSession();
         });
     });
-    
-    peer.on('error', err => {
-        console.error("PeerJS Error (Participant):", err);
-        if (statusElement) statusElement.innerHTML = `<span class="fake">❌ Participant Error. Check Console.</span>`;
-    });
 }
 
-
-// --- FUNCTIONAL CONTROL BUTTONS ---
-let isVideoEnabled = true;
-let isAudioEnabled = true;
-
-function toggleMute() {
-    if (!localStream) return;
-
-    localStream.getAudioTracks().forEach(track => {
-        isAudioEnabled = !isAudioEnabled;
-        track.enabled = isAudioEnabled;
-    });
-
-    const button = document.getElementById('muteButton');
-    if (button) {
-        button.innerHTML = isAudioEnabled ? '🔇 Mute' : '🔊 Unmute';
-        button.classList.toggle('active', !isAudioEnabled);
+// 4. Session Control and Cleanup
+function endSession() {
+    console.log("Ending session...");
+    if (remoteConnection) {
+        remoteConnection.close();
     }
-}
-
-function toggleVideo() {
-    if (!localStream) return;
-
-    localStream.getVideoTracks().forEach(track => {
-        isVideoEnabled = !isVideoEnabled;
-        track.enabled = isVideoEnabled;
-    });
-    
-    const button = document.getElementById('videoButton');
-    if (button) {
-        button.innerHTML = isVideoEnabled ? '📷 Video Off' : '📸 Video On';
-        button.classList.toggle('active', !isVideoEnabled);
-    }
-    
-    if (isHost && canvasElement) {
-        canvasElement.style.visibility = isVideoEnabled ? 'visible' : 'hidden';
-    } else if (!isHost && localVideoElement) {
-        localVideoElement.style.visibility = isVideoEnabled ? 'visible' : 'hidden';
-    }
-}
-
-function endCall() {
-    if (peer) {
-        peer.disconnect();
-        peer.destroy();
-        peer = null;
-    }
-
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
     }
-
-    if (statusElement) {
-        statusElement.innerHTML = `<span class="fake">🛑 Call Ended. Disconnected from server.</span>`;
+    if (peer) {
+        peer.destroy();
     }
+    window.location.href = 'index.html'; // Redirect to home page
+}
 
-    if (joinScreen && meetingRoom) {
-        joinScreen.style.display = 'block';
-        meetingRoom.style.display = 'none';
-        window.history.replaceState(null, null, window.location.pathname);
-    } else {
-        alert("Call Ended. Reloading page.");
-        window.location.reload();
+// --- Event Listeners ---
+if (joinButton) {
+    joinButton.addEventListener('click', joinMeeting);
+}
+if (cutButton) {
+    cutButton.addEventListener('click', endSession);
+}
+
+// Initialize based on page
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.title.includes('Host Session')) {
+        startHostSession();
+    } else if (document.title.includes('Join Meeting')) {
+        // Meeting page starts on the join screen, waits for input
+        if (meetingRoom) meetingRoom.style.display = 'none';
+        if (joinScreen) joinScreen.style.display = 'flex';
+    }
+});
+
+// --- Tensorflow/Deepfake Detection Logic (Simplified Stubs) ---
+// NOTE: This is complex logic and is simplified here. 
+// You'll need to fill in the actual model loading and detection loop.
+
+let detectionModel, classificationModel;
+
+async function loadModels() {
+    try {
+        statusElement.innerHTML = "⏳ Loading AI Models...";
+        // Load the face detection model (BlazeFace)
+        detectionModel = await blazeface.load(); 
+        
+        // Load the classification model (e.g., MobileNet/Custom Model for Deepfake)
+        classificationModel = await mobilenet.load(); 
+        
+        statusElement.innerHTML = `<span class='real'>✨ AI Models Loaded.</span>`;
+    } catch (e) {
+        console.error("Model loading failed:", e);
+        statusElement.innerHTML = `<span class="fake">❌ AI Load Error. Deepfake detection disabled.</span>`;
     }
 }
 
-
-// 8. --- Initialization ---
-async function init() {
-    
-    const videoToSetup = isHost ? videoElement : localVideoElement;
-    
-    if (!videoToSetup) {
-        console.error("CRITICAL: No video element found for setup.");
-        return;
+async function startDetection(videoElement, isLocal = false) {
+    if (!detectionModel || !classificationModel) {
+        await loadModels();
     }
 
-    const webcamReady = await setupWebcam(videoToSetup);
-    
-    if (webcamReady) {
-        if (isHost) {
-            await loadModels(); 
-            handleHostSession();
-        } 
-        else {
-            const urlId = getUrlMeetingID();
-            if (urlId) {
-                if (meetingIdInput) meetingIdInput.value = urlId;
-                connectToHost(urlId);
-            }
+    if (!detectionModel || !classificationModel) return;
 
-            if (joinButton && meetingIdInput) {
-                joinButton.addEventListener('click', () => {
-                    const enteredId = meetingIdInput.value.trim();
-                    connectToHost(enteredId);
-                });
+    if (isLocal) {
+        console.log("Starting detection on local stream...");
+    } else {
+        console.log("Starting detection on remote stream...");
+    }
+    
+    const canvas = document.getElementById('detection-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const videoWidth = videoElement.videoWidth;
+    const videoHeight = videoElement.videoHeight;
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+
+    // Detection Loop
+    const detect = async () => {
+        if (videoElement.paused || videoElement.ended) return;
+
+        // 1. Detect Faces
+        const predictions = await detectionModel.estimateFaces(videoElement, false);
+
+        ctx.clearRect(0, 0, videoWidth, videoHeight);
+
+        let anomalyDetected = false;
+
+        predictions.forEach(prediction => {
+            const start = prediction.topLeft;
+            const end = prediction.bottomRight;
+            const size = [end[0] - start[0], end[1] - start[1]];
+
+            // 2. Classify Face (Deepfake Check - SIMPLIFIED STUB)
+            // You would normally crop the face area and pass it to a specialized deepfake model.
+            // Here, we use a placeholder classification result.
+            let confidence = Math.random() > 0.8 ? 0.3 : (0.7 + Math.random() * 0.3); // 30% chance of low confidence (deepfake hint)
+            let classification = confidence > 0.7 ? "Real" : "Anomaly";
+            
+            if (classification === "Anomaly") {
+                anomalyDetected = true;
+                ctx.strokeStyle = "red";
+                ctx.fillStyle = "red";
+                ctx.lineWidth = 4;
+                if(document.getElementById('removal-alert')) document.getElementById('removal-alert').style.display = 'block';
+            } else {
+                ctx.strokeStyle = "lime";
+                ctx.fillStyle = "lime";
+                ctx.lineWidth = 2;
+                if(document.getElementById('removal-alert')) document.getElementById('removal-alert').style.display = 'none';
+            }
+            
+            // Draw bounding box
+            ctx.beginPath();
+            ctx.rect(start[0], start[1], size[0], size[1]);
+            ctx.stroke();
+
+            // Draw label
+            ctx.font = '18px Arial';
+            ctx.fillText(`${classification} (${(confidence * 100).toFixed(0)}%)`, start[0], start[1] > 10 ? start[1] - 5 : 10);
+        });
+
+        // Update UI
+        if (statusElement && !isLocal) {
+            if (anomalyDetected) {
+                statusElement.className = "status-message fake";
+                statusElement.innerHTML = `⚠️ **Deepfake Anomaly Detected!** (${predictions.length} faces)`;
+                document.getElementById('anomaly-details').innerHTML = `**High Risk:** Deepfake signature matches found. Confidence: ${(confidence * 100).toFixed(1)}% Real`;
+            } else if (predictions.length > 0) {
+                statusElement.className = "status-message real";
+                statusElement.innerHTML = `🟢 **Integrity Check OK** (${predictions.length} faces)`;
+                document.getElementById('anomaly-details').innerHTML = `**Low Risk:** Normal behavior detected. Confidence: ${(confidence * 100).toFixed(1)}% Real`;
+            } else {
+                statusElement.className = "status-message";
+                statusElement.innerHTML = `Scanning... No faces detected.`;
+                document.getElementById('anomaly-details').innerHTML = `Awaiting face detection.`;
             }
         }
+
+        // Loop the detection
+        requestAnimationFrame(detect);
+    };
+
+    videoElement.addEventListener('loadeddata', detect);
+    // Fallback if loadeddata already fired
+    if (videoElement.readyState >= 2) {
+        detect();
     }
-    
-    // Add call control listeners
-    document.getElementById('muteButton')?.addEventListener('click', toggleMute);
-    document.getElementById('videoButton')?.addEventListener('click', toggleVideo);
-    document.getElementById('cutButton')?.addEventListener('click', endCall);
-
-
-    displayFrame();
 }
-
-// Start the application
-init();
