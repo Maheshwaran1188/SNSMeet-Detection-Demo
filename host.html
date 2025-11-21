@@ -3,189 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNSMeet | Host Session (Deepfake AI)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Host Session - Deepfake Detector</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-    <style>
-        /* Host-specific layout for detection panel */
-        .host-container {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            height: 100vh;
-            overflow: hidden;
-            background-color: var(--color-background);
-        }
-        .main-meeting-area {
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            gap: 15px;
-            background-color: #1a1a1a;
-        }
-        .main-video-view {
-            flex-grow: 1;
-            position: relative;
-            background-color: #0b0c10;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        .main-video-view video, .main-video-view canvas {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        .main-video-view #detection-canvas {
-            z-index: 5; /* Canvas over video for drawing boxes */
-        }
-        .video-label {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 8px 15px;
-            border-radius: 6px;
-            color: white;
-            font-weight: 600;
-            z-index: 10;
-        }
-        .detection-sidebar {
-            background-color: var(--color-surface);
-            padding: 20px;
-            overflow-y: auto;
-            border-left: 1px solid #333;
-        }
-        .detection-sidebar h2 {
-            color: var(--color-primary);
-            margin-top: 0;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-            font-size: 1.5em;
-        }
-        .detection-card {
-            background-color: var(--color-background);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-        }
-        .detection-status {
-            font-size: 1.1em;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-        .detection-status.real { color: var(--color-success); }
-        .detection-status.fake { color: var(--color-danger); }
-        
-        .alert-box {
-            background-color: #331f1f;
-            border: 1px solid var(--color-danger);
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 15px;
-            text-align: center;
-            display: none; /* Hidden by default */
-        }
-        .alert-box button {
-            background-color: var(--color-danger);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-
-        /* Chart/Graph container */
-        .chart-container {
-            height: 250px;
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 <body>
+    <div class="container host-layout">
+        <header>
+            <h1>Host Session - Deepfake Detector</h1>
+            <p id="meeting-id-display">Meeting ID: --</p>
+        </header>
 
-    <div class="host-container">
-        
-        <div class="main-meeting-area">
-            <div class="main-video-view">
-                <video id="webcam" autoplay playsinline></video>
+        <main class="main-content">
+            <div class="main-video-area">
+                <video id="webcam" autoplay playsinline muted></video>
                 <canvas id="detection-canvas"></canvas>
-                <div class="video-label">Host (You)</div>
             </div>
 
-            <div class="video-grid" style="height: 150px; flex-shrink: 0;">
-                <div class="video-tile" style="width: 30%; height: 100%;">
-                    <video id="participant-video" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
-                    <p>Participant 1</p>
-                </div>
-                <div class="video-tile" style="width: 30%; height: 100%;">
-                    <p>Participant 2</p>
-                </div>
-                <div class="video-tile" style="width: 30%; height: 100%;">
-                    <p>Participant 3</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="detection-sidebar">
-            <h2><i class="fas fa-microchip"></i> AI Deepfake Monitoring</h2>
-
-            <div class="detection-card">
-                <h3>Real-time Anomaly Status:</h3>
-                <p id="status" class="detection-status">⏳ Initializing Systems...</p>
-                <div id="anomaly-details"></div>
-            </div>
-
-            <div class="detection-card">
-                <h3>Anomaly Confidence (%)</h3>
+            <div class="sidebar">
+                <h2>Analysis & Controls</h2>
+                <p id="status" class="status-message">Loading...</p>
+                <div id="anomaly-details">Awaiting analysis...</div>
+                
                 <div class="chart-container">
+                    <h3>Confidence Trend</h3>
                     <canvas id="confidenceChart"></canvas>
                 </div>
-            </div>
-
-            <div class="detection-card">
-                <h3>Session Integrity Score</h3>
                 <div class="chart-container">
+                    <h3>Integrity Score</h3>
                     <canvas id="integrityChart"></canvas>
                 </div>
-                <div id="removal-alert" class="alert-box">
-                    <i class="fas fa-exclamation-triangle"></i> **Critical Alert!** High anomaly rate detected for Host.
-                    <button>Force End Session</button>
+
+                <div id="removal-alert" class="alert-box" style="display:none;">
+                    <p>🚨 **CRITICAL ANOMALY DETECTED!**</p>
+                    <button>Remove Participant</button>
                 </div>
             </div>
-        </div>
+        </main>
+
+        <section class="bottom-bar">
+            <h2>Participants</h2>
+            <div class="video-grid">
+                <div class="video-tile">
+                    <video id="participant-video" autoplay playsinline></video>
+                    <p>Participant 1 (Remote)</p>
+                </div>
+                <div class="video-tile"><p>Participant 2</p></div>
+                <div class="video-tile"><p>Participant 3</p></div>
+            </div>
+        </section>
     </div>
 
-    <div class="meeting-controls">
-        <div class="meeting-info">
-            <span id="meeting-id-display" style="color: #ddd; font-weight: 600;">Generating Meeting ID...</span>
-        </div>
-        
-        <div class="control-group">
-            <button id="mic-toggle-btn" class="on"><i class="fas fa-microphone"></i></button>
-            <button id="cam-toggle-btn" class="on"><i class="fas fa-video"></i></button>
-            <button><i class="fas fa-desktop"></i> Screen Share</button>
-            <button><i class="fas fa-users"></i> Participants</button>
-            <button><i class="fas fa-comment-alt"></i> Chat</button>
-        </div>
-        
-        <div class="control-group">
-            <button class="end-call" onclick="window.location.href='index.html'"><i class="fas fa-phone-slash"></i> End Meeting</button>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+    <script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.2.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
-    
-    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script> 
-    
-    <script src="app.js"></script>
-    <script src="main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
