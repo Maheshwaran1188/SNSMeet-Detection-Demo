@@ -1,11 +1,11 @@
 /* --- Base Styles --- */
 :root {
-    --bg-color-dark: #121212; /* Main background */
-    --bg-color-light: #1e1e1e; /* Card/Inner background */
-    --text-color-primary: #e0e0e0; /* Main text color */
-    --accent-color: #03dac6; /* Teal accent for deepfake monitoring */
-    --danger-color: #cf6679; /* Red for alerts */
-    --success-color: #4CAF50; /* Green for real/success */
+    --bg-color-dark: #121212; 
+    --bg-color-light: #1e1e1e; 
+    --text-color-primary: #e0e0e0; 
+    --accent-color: #03dac6; 
+    --danger-color: #cf6679; 
+    --success-color: #4CAF50; 
     --card-bg: #212121;
     --border-color: #333;
     --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -17,278 +17,323 @@ body {
     font-family: var(--font-family);
     margin: 0;
     padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
-}
-
-header {
-    text-align: center;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-/* --- Host Layout (Two Columns) --- */
-.host-layout {
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
 
-.main-content {
-    display: flex;
-    gap: 30px;
-    align-items: flex-start;
-    margin-top: 20px;
+header {
+    text-align: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
 }
 
-/* --- Left Side: Video & Detection --- */
+/* --- Meeting Layout (Full Screen Video Focus) --- */
+.meeting-content {
+    display: flex;
+    gap: 20px;
+    flex-grow: 1;
+    margin-top: 10px;
+}
+
+/* --- Main Video Area (Remote Video) --- */
 .main-video-area {
     flex-grow: 1;
-    min-width: 60%;
     position: relative;
-    background-color: var(--card-bg);
+    background-color: #000;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 500px; 
 }
 
-#webcam {
-    /* Hidden, used only as source for canvas */
-    display: none; 
-    width: 100%;
-}
-#detection-canvas {
+.main-video-area video {
     width: 100%;
     height: 100%;
+    object-fit: contain; 
     display: block;
-    position: relative;
 }
 
-/* --- Right Side: Sidebar Controls --- */
-.sidebar {
+.video-label {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+/* --- Sidebar for Analysis (Host Only) --- */
+.analysis-sidebar {
     width: 350px;
     background-color: var(--card-bg);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     flex-shrink: 0;
+    overflow-y: auto;
 }
 
-.sidebar h2 {
+.analysis-sidebar h2 {
     color: var(--accent-color);
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
     margin-top: 0;
 }
 
-.status-message {
-    padding: 10px;
-    border-radius: 4px;
-    font-weight: bold;
+.local-analysis-preview {
     margin-bottom: 20px;
     text-align: center;
+    position: relative;
 }
-
-.real {
-    background-color: rgba(76, 175, 80, 0.2);
-    color: var(--success-color);
+.local-analysis-preview video {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
 }
-
-.fake {
-    background-color: rgba(207, 102, 121, 0.2);
-    color: var(--danger-color);
-}
-
-#anomaly-details {
-    padding: 15px;
-    background-color: var(--bg-color-light);
+.local-analysis-preview video,
+.local-analysis-preview canvas {
+    width: 100%;
+    max-width: 250px;
+    height: auto;
     border-radius: 4px;
-    margin-bottom: 20px;
-    font-size: 0.9em;
+    border: 2px solid var(--border-color);
+    margin: 5px auto;
+    display: block;
 }
 
-/* --- Charts --- */
-.chart-container {
-    margin-bottom: 25px;
-    padding-top: 10px;
+/* --- Participant Local Preview (meeting.html) --- */
+.local-preview {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 180px;
+    height: 120px;
+    background-color: var(--card-bg);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    z-index: 10;
 }
-.chart-container h3 {
-    margin-top: 0;
-    font-size: 1.1em;
-    color: var(--text-color-primary);
+.local-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.local-preview p {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 3px 0;
+    margin: 0;
+    text-align: center;
+    font-size: 0.8em;
 }
 
-/* --- Call Controls Bar Styling (Fixes Visibility Issue) --- */
+/* --- Call Controls Bar Styling --- */
 .call-controls-bar {
     width: 100%;
     max-width: 600px;
-    margin: 20px auto 30px auto; /* Centers the bar horizontally */
+    margin: 20px auto 30px auto; 
     display: flex; 
     justify-content: space-around;
     padding: 15px 20px;
     background-color: var(--card-bg);
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
 }
-
 .control-button {
     background-color: var(--bg-color-light);
     color: var(--text-color-primary);
-    border: 2px solid var(--bg-color-light);
-    padding: 10px 15px;
-    border-radius: 8px;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 1em;
-    font-weight: 600;
-    transition: background-color 0.3s, border-color 0.3s;
+    transition: background-color 0.3s;
 }
-
 .control-button:hover {
-    background-color: #333;
+    background-color: #383838;
 }
-
-.control-button.active {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: var(--accent-color);
-}
-
 .cut-button {
     background-color: var(--danger-color);
-    color: var(--bg-color-dark);
-    font-weight: bold;
-    border: 2px solid var(--danger-color);
+    color: white;
 }
-
 .cut-button:hover {
-    background-color: #a34e5d;
-    border-color: #a34e5d;
+    background-color: #b05060;
 }
 
-/* --- Bottom Participants Bar --- */
-.bottom-bar {
-    width: 100%;
-    margin-top: 30px;
-    padding: 15px 0;
-    background-color: var(--card-bg);
-    border-radius: 8px;
-}
-
-.bottom-bar h2 {
-    text-align: left;
-    margin: 0 0 10px 20px;
-    color: var(--accent-color);
-}
-
-.video-grid {
-    display: flex;
-    gap: 15px;
-    padding: 0 20px;
-    overflow-x: auto;
-}
-
-.video-tile {
-    width: 180px;
-    min-width: 180px;
-    height: 120px;
-    background-color: #333;
-    border-radius: 4px;
-    position: relative;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-}
-
-.video-tile video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 4px;
-}
-
-.video-tile p {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-    padding: 3px 6px;
-    margin: 0;
-    font-size: 0.8em;
-    border-top-right-radius: 4px;
-}
-
-/* --- Alert Box --- */
-#removal-alert {
-    padding: 15px;
-    background-color: var(--danger-color);
-    color: var(--bg-color-dark);
-    border-radius: 4px;
-    text-align: center;
-    font-weight: bold;
-    margin-top: 20px;
-}
-#removal-alert button {
-    background-color: var(--bg-color-dark);
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: background-color 0.3s;
-}
-#removal-alert button:hover {
-    background-color: #000;
-}
-/* --- Join Screen Styles (for meeting.html) --- */
-.join-screen {
-    max-width: 400px;
-    margin: 150px auto;
-    padding: 40px;
-    background-color: var(--card-bg);
-    border-radius: 8px;
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.5);
-}
-.join-screen input, .join-screen button {
-    width: 100%;
+/* --- Utility/Status Styles --- */
+.status-message {
     padding: 10px;
-    margin-top: 15px;
+    margin-bottom: 15px;
     border-radius: 4px;
-    border: 1px solid var(--border-color);
-    box-sizing: border-box;
-    font-size: 1em;
-}
-.join-screen input {
-    background-color: var(--bg-color-dark);
-    color: var(--text-color-primary);
-}
-.join-screen button {
-    background-color: var(--accent-color);
-    color: #000;
     font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s;
+    text-align: center;
 }
-.join-screen button:hover {
-    background-color: #009688; 
+.real {
+    background-color: var(--success-color);
+    color: var(--bg-color-dark);
 }
-
-.meeting-room {
-    /* Basic layout for participant room */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+.fake {
+    background-color: var(--danger-color);
+    color: white;
 }
-.local-preview {
+#anomaly-details {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-left: 5px solid var(--accent-color);
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.chart-container {
     margin-top: 20px;
     padding: 10px;
     background-color: var(--bg-color-light);
     border-radius: 4px;
 }
-#localWebcam {
-    width: 100%;
-    max-width: 250px;
-    height: auto;
+
+/* --- Landing Page Styles (index.html) --- */
+.landing-container {
+    max-width: 800px;
+    margin: 80px auto;
+    padding: 40px;
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+
+.landing-container h1 {
+    color: var(--text-color-primary);
+    font-size: 2.2em;
+    margin-bottom: 10px;
+}
+
+.landing-container p {
+    color: #b0b0b0;
+    font-size: 1.1em;
+    margin-bottom: 30px;
+}
+
+.status-badge {
+    display: inline-block;
+    background-color: var(--success-color);
+    color: var(--bg-color-dark);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    margin-bottom: 25px;
+}
+
+.action-links {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+    flex-wrap: wrap; 
+}
+
+.action-links a {
+    text-decoration: none;
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1.1em;
+    transition: background-color 0.3s, transform 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.host-button {
+    background-color: var(--accent-color);
+    color: var(--bg-color-dark);
+}
+.host-button:hover {
+    background-color: #009688;
+    transform: translateY(-2px);
+}
+
+.join-button {
+    background-color: var(--bg-color-light);
+    color: var(--text-color-primary);
+    border: 2px solid var(--accent-color);
+}
+.join-button:hover {
+    background-color: #333;
+    transform: translateY(-2px);
+}
+
+.invite-box {
+    background-color: var(--bg-color-light);
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 40px;
+    text-align: left;
+}
+.invite-box h2 {
+    margin-top: 0;
+    color: var(--accent-color);
+}
+.invite-box input {
+    background-color: var(--bg-color-dark);
+    color: var(--text-color-primary);
+    width: 60%;
+    padding: 10px;
+    margin: 5px 5px 5px 0;
     border-radius: 4px;
+    border: 1px solid var(--border-color);
+    box-sizing: border-box;
+}
+.invite-box button {
+    background-color: var(--accent-color);
+    color: var(--bg-color-dark);
+    cursor: pointer;
+    width: 35%;
+    padding: 10px;
+    margin: 5px 5px 5px 0;
+    border-radius: 4px;
+    border: none;
+    font-weight: bold;
+}
+.invite-box p {
+    margin-top: 10px; 
+    font-size: 0.9em; 
+    color: #888;
+}
+
+/* --- Media Queries for small screens --- */
+@media (max-width: 768px) {
+    .meeting-content {
+        flex-direction: column;
+    }
+    .analysis-sidebar {
+        width: 100%;
+    }
+    .local-preview {
+        top: auto;
+        bottom: 80px; /* Above controls */
+        right: 10px;
+    }
+    .invite-box input, .invite-box button {
+        width: 100%;
+        margin: 5px 0;
+    }
 }
