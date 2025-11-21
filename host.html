@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Host Session - Deepfake Detector</title>
+    <title>Host Session - AI Monitoring Dashboard</title>
     <link rel="stylesheet" href="style.css"> 
 </head>
 <body>
     <div class="container host-layout">
         <header>
-            <h1>AI Deepfake Monitoring</h1>
+            <h1>AI Deepfake Monitoring Dashboard</h1>
             <p id="meeting-id-display">Meeting ID: --</p>
         </header>
 
@@ -20,23 +20,40 @@
             </div>
 
             <div class="sidebar">
+                <h2>Real-Time Anomaly Status</h2>
                 <p id="status" class="status-message">Loading system...</p>
                 
-                <h2>Analysis & Controls</h2>
-                <div id="anomaly-details">Awaiting analysis...</div>
+                <h3>Anomaly Details</h3>
+                <div id="anomaly-details">Awaiting initial stream analysis...</div>
                 
-                <div class="chart-container"><canvas id="confidenceChart"></canvas></div>
-                <div class="chart-container"><canvas id="integrityChart"></canvas></div>
+                <div class="chart-container">
+                    <h3>Anomaly Confidence Trend</h3>
+                    <canvas id="confidenceChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Session Integrity Score</h3>
+                    <canvas id="integrityChart"></canvas>
+                </div>
 
-                <div id="removal-alert" style="display:none;"></div>
+                <div id="removal-alert" style="display:none;">
+                    <p>🚨 **CRITICAL DEEPFAKE ANOMALY DETECTED!**</p>
+                    <button>Force Disconnect Participant</button>
+                </div>
             </div>
         </main>
 
         <section class="bottom-bar">
-            <h2>Participants</h2>
+            <h2>Active Participants</h2>
             <div class="video-grid">
-                <video id="participant-video" autoplay playsinline></video>
+                <div class="video-tile">
+                    <video id="participant-video" autoplay playsinline></video>
+                    <p>Participant 1 (Remote)</p>
                 </div>
+                <div class="video-tile">
+                    <video srcObject="localStream" autoplay playsinline muted></video>
+                    <p>Host (You)</p>
+                </div>
+            </div>
         </section>
         
         <div id="join-screen" style="display:none;"></div>
