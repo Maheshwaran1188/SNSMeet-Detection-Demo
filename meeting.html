@@ -55,6 +55,16 @@
             align-items: center;
             color: #aaa;
             margin: 20px auto;
+            overflow: hidden; 
+            position: relative;
+        }
+        .video-placeholder video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
     </style>
 </head>
@@ -72,16 +82,22 @@
     <div id="meeting-room" style="display:none; text-align:center;">
         <h1 style="margin-top: 50px;">Welcome to Meeting: <span id="currentMeetingIdDisplay" style="color: var(--color-secondary);"></span></h1>
         
+        <p id="status" class="detection-status" style="margin-bottom: 15px;">⏳ Initializing systems...</p>
+        
         <div class="video-grid" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-            <div class="video-placeholder" style="width: 400px; height: 300px;">
-                <p>Host's Video Feed (Simulated)</p>
+            
+            <div id="host-video-container" class="video-placeholder" style="width: 400px; height: 300px;">
+                <video id="webcam" autoplay playsinline></video>
+                <p style="z-index: 1;">Host's Video Feed</p>
             </div>
-            <div class="video-placeholder" style="width: 400px; height: 300px;">
-                <p>Your Video Feed (Simulated)</p>
+            
+            <div id="local-video-container" class="video-placeholder" style="width: 400px; height: 300px;">
+                <video id="localWebcam" autoplay playsinline muted></video>
+                <p style="z-index: 1;">Your Video Feed</p>
             </div>
         </div>
         
-         <div class="meeting-controls" style="position:static; margin-top:20px; margin-bottom: 50px;">
+        <div class="meeting-controls" style="position:static; margin-top:20px; margin-bottom: 50px;">
             <div class="control-group">
                 <button id="mic-toggle-btn" class="on"><i class="fas fa-microphone"></i></button>
                 <button id="cam-toggle-btn" class="on"><i class="fas fa-video"></i></button>
@@ -96,6 +112,8 @@
         </div>
     </div>
 
-    <script src="main.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script> 
+    <script src="app.js"></script> 
+    <script src="main.js"></script> 
 </body>
 </html>
