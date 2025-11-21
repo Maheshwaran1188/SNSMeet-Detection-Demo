@@ -36,6 +36,15 @@ const meetingIdInput = document.getElementById('meetingIdInput');
 const joinScreen = document.getElementById('join-screen');
 const meetingRoom = document.getElementById('meeting-room');
 
+// --- CRITICAL FIX: STUN/TURN Configuration for WebRTC Reliability ---
+const ICE_SERVERS = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' }
+    ]
+};
 
 // --- ANOMALY CONFIGURATION ---
 const PADDING_FACTOR = 1.3; 
@@ -59,7 +68,7 @@ function getCssVariable(name) {
 
 // 1. Setup Webcam Feed
 async function setupWebcam(videoTargetElement) {
-    statusElement.innerHTML = "⏳ Requesting webcam access...";
+    if (statusElement) statusElement.innerHTML = "⏳ Requesting webcam access...";
     try {
         const stream = navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localStream = await stream; // Store the stream globally for WebRTC
@@ -80,7 +89,7 @@ async function setupWebcam(videoTargetElement) {
             };
         });
     } catch (error) {
-        statusElement.innerHTML = `<span class="fake">❌ ERROR: Could not access webcam. (${error.message})</span>`;
+        if (statusElement) statusElement.innerHTML = `<span class="fake">❌ ERROR: Could not access webcam. (${error.message})</span>`;
         console.error("Webcam Error:", error);
     }
 }
@@ -214,9 +223,6 @@ async function detectDeepfakeArtifacts() {
         return;
     }
     
-    // [Existing detection logic remains, only uncommented parts are shown for brevity]
-    // ... all the cropping, resizing, MobileNet classification, and anomaly check logic ...
-
     let predictions = [];
     let videoTensor = null;
 
@@ -227,7 +233,21 @@ async function detectDeepfakeArtifacts() {
         if (predictions.length > 0) {
             videoTensor = tf.browser.fromPixels(videoElement);
             for (const p of predictions) {
-                // ... Bounding box calculation and cropping (unchanged) ...
+                
+                const [xMin, yMin] = p.topLeft;
+                const [xMax, yMax] = p.bottomRight;
+                
+                // Calculate size and apply padding
+                const width = xMax - xMin;
+                const height = yMax - yMin;
+                const center = [(xMin + xMax) / 2, (yMin + yMax) / 2];
+                const size = Math.max(width, height) * PADDING_FACTOR; 
+
+                // Ensure crop coordinates stay within video bounds
+                const startX = Math.max(0, Math.floor(center[0] - size / 2));
+                const startY = Math.max(0, Math.floor(center[1] - size / 2));
+                const boxW = Math.min(videoElement.videoWidth - startX, Math.ceil(size));
+                const boxH = Math.min(videoElement.videoHeight - startY, Math.ceil(size));
                 
                 let croppedFace = null;
                 let resizedFace = null;
@@ -299,9 +319,11 @@ async function detectDeepfakeArtifacts() {
     const currentConfidence = lastDetectionResult.isFake ? lastDetectionResult.confidence : 0;
     updateVisuals(lastDetectionResult.isFake, currentConfidence);
 
-    statusElement.innerHTML = lastDetectionResult.isFake 
-        ? `<span class="fake">🚨 DEEPFAKE ALERT! ${lastDetectionResult.statusText}</span>`
-        : `<span class="real">✅ Status: ${lastDetectionResult.statusText}</span>`;
+    if (statusElement) {
+        statusElement.innerHTML = lastDetectionResult.isFake 
+            ? `<span class="fake">🚨 DEEPFAKE ALERT! ${lastDetectionResult.statusText}</span>`
+            : `<span class="real">✅ Status: ${lastDetectionResult.statusText}</span>`;
+    }
 }
 
 
@@ -348,21 +370,23 @@ async function displayFrame() {
 }
 
 
-// 7. --- WEBRTC/PEERJS LOGIC (NEW) ---
+// 7. --- WEBRTC/PEERJS LOGIC ---
 function getUrlMeetingID() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('id');
 }
 
 function handleHostSession() {
-    const hostID = getUrlMeetingID() || Math.random().toString(36).substring(2, 9);
+    const hostID = getUrlMeetingID() || Math.random().toString(36).substring(2, 9).toUpperCase();
     
-    // **CRITICAL FIX:** Connect to the stable PeerJS Cloud Server
+    // Initialize Peer with STUN servers and high debug level
     peer = new Peer(hostID, {
         host: 'peerjs.com', 
         secure: true,      
         port: 443,         
-        path: '/'
+        path: '/',
+        config: ICE_SERVERS,
+        debug: 3
     });
 
     peer.on('open', id => {
@@ -377,19 +401,22 @@ function handleHostSession() {
 
     // Host receives a call from a participant
     peer.on('call', call => {
-        statusElement.innerHTML = `<span class="real">📞 Incoming Participant Call...</span>`;
+        if (statusElement) statusElement.innerHTML = `<span class="real">📞 Incoming Participant Call...</span>`;
         call.answer(localStream);
         
         call.on('stream', remoteStream => {
-            // This is where you would handle the remote stream from the participant
-            // For a simple demo, we'll just log it
-            console.log('Received Participant Stream');
+            // Find a dedicated video element for the participant
+            const participantVideo = document.getElementById('participant-video');
+            if(participantVideo) {
+                participantVideo.srcObject = remoteStream;
+                participantVideo.play();
+            }
         });
     });
 
     peer.on('error', err => {
         console.error("PeerJS Error (Host):", err);
-        statusElement.innerHTML = `<span class="fake">❌ WEBRTC Error. Check Console.</span>`;
+        if (statusElement) statusElement.innerHTML = `<span class="fake">❌ WEBRTC Error. Check Console.</span>`;
     });
 }
 
@@ -407,17 +434,20 @@ function connectToHost(hostID) {
     if (currentMeetingIdDisplay) {
          currentMeetingIdDisplay.innerText = hostID;
     }
+    if (statusElement) statusElement.innerHTML = `<span class="real">⏳ Initializing participant peer...</span>`;
 
-    // **CRITICAL FIX:** Connect to the stable PeerJS Cloud Server
+    // Initialize Peer with STUN servers and high debug level
     peer = new Peer(undefined, {
         host: 'peerjs.com', 
         secure: true,      
         port: 443,         
-        path: '/'
+        path: '/',
+        config: ICE_SERVERS,
+        debug: 3
     });
 
     peer.on('open', () => {
-        statusElement.innerHTML = `<span class="real">📞 Calling Host: ${hostID}...</span>`;
+        if (statusElement) statusElement.innerHTML = `<span class="real">📞 Calling Host: ${hostID}...</span>`;
         
         // Use the new localWebcam element for participant's video
         const localWebcamElement = document.getElementById('localWebcam');
@@ -430,17 +460,18 @@ function connectToHost(hostID) {
 
         call.on('stream', remoteStream => {
             // Display the stream received from the host in the main video element
-            const hostVideoElement = document.getElementById('webcam'); // Reusing the host's video ID from your template
+            const hostVideoElement = document.getElementById('webcam'); 
             if (hostVideoElement) {
                 hostVideoElement.srcObject = remoteStream;
                 hostVideoElement.play();
-                statusElement.innerHTML = `<span class="real">🤝 Joined Host Session.</span>`;
+                if (statusElement) statusElement.innerHTML = `<span class="real">🤝 Joined Host Session.</span>`;
             }
         });
 
         call.on('error', err => {
             console.error("Call Error:", err);
-            statusElement.innerHTML = `<span class="fake">❌ Call Failed or Host Offline.</span>`;
+            alert("Meeting not found or the host session is inactive/closed. (ID must match the host's ID)"); // Display the user alert
+            if (statusElement) statusElement.innerHTML = `<span class="fake">❌ Call Failed or Host Offline.</span>`;
             // Re-show join screen on failure
             if (joinScreen && meetingRoom) {
                 joinScreen.style.display = 'block';
@@ -451,37 +482,34 @@ function connectToHost(hostID) {
     
     peer.on('error', err => {
         console.error("PeerJS Error (Participant):", err);
-        statusElement.innerHTML = `<span class="fake">❌ WEBRTC Error. Check Console.</span>`;
+        if (statusElement) statusElement.innerHTML = `<span class="fake">❌ WEBRTC Error. Check Console.</span>`;
     });
 }
 
 // 8. --- Initialization ---
 async function init() {
     
-    // --- Host Initialization ---
-    if (isHost) {
-        await setupWebcam(videoElement); // Use the main video element
-        if (localStream) {
+    const targetVideoElement = isHost ? videoElement : document.getElementById('localWebcam');
+    if (!targetVideoElement) {
+        console.error("Critical: Target video element not found.");
+        return;
+    }
+
+    await setupWebcam(targetVideoElement);
+    
+    if (localStream) {
+        // --- Host Initialization ---
+        if (isHost) {
             handleHostSession();
             await loadModels(); // Load AI models only on host
-        }
-    } 
-    
-    // --- Participant Initialization ---
-    else {
-        // Get the element where *our* local video will show up before we join
-        const localWebcamElement = document.getElementById('localWebcam');
-        if (!localWebcamElement) {
-            console.error("Participant video element (localWebcam) not found.");
-            return;
-        }
-
-        await setupWebcam(localWebcamElement);
-        if (localStream) {
+        } 
+        
+        // --- Participant Initialization ---
+        else {
             // Check if ID is in URL (invite link)
             const urlId = getUrlMeetingID();
             if (urlId) {
-                meetingIdInput.value = urlId;
+                if (meetingIdInput) meetingIdInput.value = urlId;
                 connectToHost(urlId);
             }
 
