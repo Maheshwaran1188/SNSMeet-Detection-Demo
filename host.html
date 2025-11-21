@@ -120,6 +120,7 @@
 
             <div class="video-grid" style="height: 150px; flex-shrink: 0;">
                 <div class="video-tile" style="width: 30%; height: 100%;">
+                    <video id="participant-video" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
                     <p>Participant 1</p>
                 </div>
                 <div class="video-tile" style="width: 30%; height: 100%;">
@@ -162,7 +163,7 @@
 
     <div class="meeting-controls">
         <div class="meeting-info">
-            <span id="meeting-id-display" style="color: #ddd; font-weight: 600;"></span>
+            <span id="meeting-id-display" style="color: #ddd; font-weight: 600;">Generating Meeting ID...</span>
         </div>
         
         <div class="control-group">
@@ -181,6 +182,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+    
+    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script> 
     
     <script src="app.js"></script>
     <script src="main.js"></script>
