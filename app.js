@@ -7,11 +7,11 @@ const removalAlertElement = document.getElementById('removal-alert');
 const ctx = canvasElement ? canvasElement.getContext('2d') : null;
 
 // Meeting elements required for both host and participant pages
-const hostVideoElement = document.getElementById('webcam'); // Used by host (local) and participant (remote)
-const localVideoElement = document.getElementById('localWebcam'); // Used by participant (local)
-const participantVideo = document.getElementById('participant-video'); // Remote participant video on host page
-const meetingIdDisplay = document.getElementById('meeting-id-display'); // Host ID display element
-const currentMeetingIdDisplay = document.getElementById('currentMeetingIdDisplay'); // Participant ID display element
+const hostVideoElement = document.getElementById('webcam'); 
+const localVideoElement = document.getElementById('localWebcam'); 
+const participantVideo = document.getElementById('participant-video'); 
+const meetingIdDisplay = document.getElementById('meeting-id-display'); 
+const currentMeetingIdDisplay = document.getElementById('currentMeetingIdDisplay'); 
 const joinButton = document.getElementById('joinButton');
 const meetingIdInput = document.getElementById('meetingIdInput');
 const joinScreen = document.getElementById('join-screen');
@@ -35,7 +35,7 @@ const ICE_SERVERS = {
 
 // --- UTILITY FUNCTIONS ---
 
-// **FIX FOR: ReferenceError: getUrlMeetingID is not defined**
+// FIX FOR: ReferenceError: getUrlMeetingID is not defined
 function getUrlMeetingID() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('id');
@@ -67,7 +67,7 @@ async function setupWebcam(videoTargetElement) {
                 if (isHost && canvasElement) {
                     canvasElement.width = videoTargetElement.videoWidth;
                     canvasElement.height = videoTargetElement.videoHeight;
-                    videoTargetElement.style.display = 'block'; 
+                    // The video element is kept hidden in new UI, but we ensure its metadata loads
                 }
                 
                 videoTargetElement.play(); 
@@ -143,7 +143,6 @@ function updateVisuals(isFake, confidence) {
         integrityChart.update('none');
     }
 
-    // Simplified update logic for UI visibility
     if (confidence >= ANOMALY_WARNING_LEVEL) {
         removalAlertElement.style.display = 'block';
     } else {
@@ -155,9 +154,8 @@ function updateVisuals(isFake, confidence) {
 async function detectDeepfakeArtifacts() {
     if (!isHost || !isModelReady) return;
     
-    // Placeholder for actual AI inference
     lastDetectionResult.predictions = [];
-    if (Math.random() < 0.05) { // 5% chance of detecting a high-confidence anomaly for demonstration
+    if (Math.random() < 0.05) { 
         lastDetectionResult.isFake = true;
         lastDetectionResult.confidence = 0.75 + Math.random() * 0.2;
         lastDetectionResult.statusText = `DEEPFAKE ARTIFACT!`;
@@ -186,12 +184,16 @@ async function displayFrame() {
     if (!localStream) return;
     
     if (isHost && ctx && videoElement.readyState >= 2) {
-        // Draw the video frame to the canvas
-        ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+        // Draw the video frame to the canvas only if video is enabled
+        if (isVideoEnabled) {
+             ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+             ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+        } else {
+             ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+             // Optionally draw a 'Video Off' message or image
+        }
     }
     
-    // AI detection runs periodically
     if (isHost && isModelReady && frameCount % INFERENCE_SKIP_RATE === 0) {
         detectDeepfakeArtifacts(); 
     }
@@ -245,7 +247,7 @@ function connectToHost(hostID) {
 
     if (joinScreen && meetingRoom) {
         joinScreen.style.display = 'none';
-        meetingRoom.style.display = 'block';
+        meetingRoom.style.display = 'flex'; // Use flex for the new layout
     }
     
     if (currentMeetingIdDisplay) currentMeetingIdDisplay.innerText = hostID;
@@ -255,7 +257,7 @@ function connectToHost(hostID) {
         host: 'peerjs.com', 
         secure: true,      
         port: 443,         
-        path: '/snsmeet', // Unique path for better connection stability
+        path: '/snsmeet', 
         config: ICE_SERVERS,
         debug: 3
     });
@@ -288,6 +290,76 @@ function connectToHost(hostID) {
         console.error("PeerJS Error (Participant):", err);
         if (statusElement) statusElement.innerHTML = `<span class="fake">❌ Participant Error. Check Console.</span>`;
     });
+}
+
+
+// --- NEW CONTROL FUNCTIONS ---
+let isVideoEnabled = true;
+let isAudioEnabled = true;
+
+function toggleMute() {
+    if (!localStream) return;
+
+    localStream.getAudioTracks().forEach(track => {
+        isAudioEnabled = !isAudioEnabled;
+        track.enabled = isAudioEnabled;
+    });
+
+    const button = document.getElementById('muteButton');
+    if (button) {
+        button.innerHTML = isAudioEnabled ? '🔇 Mute' : '🔊 Unmute';
+        button.classList.toggle('active', !isAudioEnabled);
+    }
+}
+
+function toggleVideo() {
+    if (!localStream) return;
+
+    localStream.getVideoTracks().forEach(track => {
+        isVideoEnabled = !isVideoEnabled;
+        track.enabled = isVideoEnabled;
+    });
+    
+    const button = document.getElementById('videoButton');
+    if (button) {
+        button.innerHTML = isVideoEnabled ? '📷 Video Off' : '📸 Video On';
+        button.classList.toggle('active', !isVideoEnabled);
+    }
+    
+    // Toggle canvas/video visibility
+    if (isHost && canvasElement) {
+        canvasElement.style.visibility = isVideoEnabled ? 'visible' : 'hidden';
+    } else if (!isHost && localVideoElement) {
+        // Participant's local preview video
+        localVideoElement.style.visibility = isVideoEnabled ? 'visible' : 'hidden';
+    }
+}
+
+function endCall() {
+    if (peer) {
+        peer.disconnect();
+        peer.destroy();
+        peer = null;
+    }
+
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+
+    if (statusElement) {
+        statusElement.innerHTML = `<span class="fake">🛑 Call Ended. Disconnected from server.</span>`;
+    }
+
+    // Attempt to return to the join screen logic
+    if (joinScreen && meetingRoom) {
+        joinScreen.style.display = 'block';
+        meetingRoom.style.display = 'none';
+        window.history.replaceState(null, null, window.location.pathname);
+    } else {
+        alert("Call Ended. Reloading page.");
+        window.location.reload();
+    }
 }
 
 
@@ -324,6 +396,12 @@ async function init() {
         }
     }
     
+    // Add call control listeners (NEW)
+    document.getElementById('muteButton')?.addEventListener('click', toggleMute);
+    document.getElementById('videoButton')?.addEventListener('click', toggleVideo);
+    document.getElementById('cutButton')?.addEventListener('click', endCall);
+
+
     displayFrame();
 }
 
