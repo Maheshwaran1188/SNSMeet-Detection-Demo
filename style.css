@@ -1,8 +1,8 @@
 /* --- Base Styles --- */
 :root {
-    --bg-color-dark: #121212;
-    --bg-color-light: #1e1e1e;
-    --text-color-primary: #e0e0e0;
+    --bg-color-dark: #121212; /* Main background */
+    --bg-color-light: #1e1e1e; /* Card/Inner background */
+    --text-color-primary: #e0e0e0; /* Main text color */
     --accent-color: #03dac6; /* Teal accent for deepfake monitoring */
     --danger-color: #cf6679; /* Red for alerts */
     --success-color: #4CAF50; /* Green for real/success */
@@ -28,9 +28,10 @@ body {
 header {
     text-align: center;
     padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
 }
 
-/* --- Host Layout --- */
+/* --- Host Layout (Two Columns) --- */
 .host-layout {
     display: flex;
     flex-direction: column;
@@ -40,6 +41,7 @@ header {
     display: flex;
     gap: 30px;
     align-items: flex-start;
+    margin-top: 20px;
 }
 
 /* --- Left Side: Video & Detection --- */
@@ -53,15 +55,17 @@ header {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-#webcam, #detection-canvas {
+#webcam {
+    /* Hide the video element itself, only show canvas overlay */
+    display: none !important; 
     width: 100%;
-    display: block;
 }
-
 #detection-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    /* Canvas overlay takes the place of the video */
+    position: relative;
 }
 
 /* --- Right Side: Sidebar Controls --- */
@@ -71,6 +75,7 @@ header {
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    flex-shrink: 0;
 }
 
 .sidebar h2 {
@@ -109,6 +114,7 @@ header {
 /* --- Charts --- */
 .chart-container {
     margin-bottom: 25px;
+    padding-top: 10px;
 }
 .chart-container h3 {
     margin-top: 0;
@@ -145,6 +151,7 @@ header {
     background-color: #333;
     border-radius: 4px;
     position: relative;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
 }
 
 .video-tile video {
@@ -188,4 +195,55 @@ header {
 }
 #removal-alert button:hover {
     background-color: #000;
+}
+/* --- Join Screen Styles (for meeting.html) --- */
+.join-screen {
+    max-width: 400px;
+    margin: 150px auto;
+    padding: 40px;
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.5);
+}
+.join-screen input, .join-screen button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    box-sizing: border-box;
+    font-size: 1em;
+}
+.join-screen input {
+    background-color: var(--bg-color-dark);
+    color: var(--text-color-primary);
+}
+.join-screen button {
+    background-color: var(--accent-color);
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.join-screen button:hover {
+    background-color: #009688; /* Slightly darker teal */
+}
+
+.meeting-room {
+    /* Basic layout for participant room */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.local-preview {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: var(--bg-color-light);
+    border-radius: 4px;
+}
+#localWebcam {
+    width: 100%;
+    max-width: 250px;
+    height: auto;
+    border-radius: 4px;
 }
