@@ -3,38 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Join Meeting - Deepfake Detector</title>
+    <title>Join Meeting - Video Call</title>
     <link rel="icon" href="https://github.com/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container participant-layout">
         
-        <div id="join-screen" class="join-screen">
-            <h1>Join Meeting</h1>
-            <input type="text" id="meetingIdInput" placeholder="Enter Meeting ID">
-            <button id="joinButton">Join</button>
+        <div id="join-screen" class="landing-container join-screen">
+            <h1>Join Deepfake Analysis Meeting</h1>
+            <p>Ask the host for the Meeting ID to join the call.</p>
+            <input type="text" id="meetingIdInput" placeholder="Enter Host Meeting ID">
+            <button id="joinButton" class="host-button">Join</button>
         </div>
 
-        <div id="meeting-room" class="meeting-room" style="display:none;">
+        <div id="meeting-room" class="meeting-room" style="display:none; flex-grow: 1;">
             <header>
-                <h1>Meeting Room</h1>
+                <h1 style="font-size: 1.5em;">Video Meeting</h1>
                 <p>Connected to ID: <span id="currentMeetingIdDisplay">--</span></p>
             </header>
 
-            <main class="main-content">
+            <main class="meeting-content">
                 <div class="main-video-area">
                     <video id="webcam" autoplay playsinline></video>
+                    <div class="video-label">Host (Remote)</div>
                 </div>
 
-                <div class="sidebar">
-                    <h2>Your Connection Status</h2>
-                    <p id="status" class="status-message">Connecting...</p>
-                    
-                    <div class="local-preview">
-                        <h3>Your Webcam (Local)</h3>
-                        <video id="localWebcam" autoplay playsinline muted></video>
-                    </div>
+                <div class="local-preview">
+                    <video id="localWebcam" autoplay playsinline muted></video>
+                    <p>You (Local)</p>
                 </div>
             </main>
             
