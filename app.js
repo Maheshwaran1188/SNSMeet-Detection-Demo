@@ -1,4 +1,4 @@
-// --- Global DOM Elements ---
+// --- Core DOM Elements (IDs must match your HTML) ---
 const videoElement = document.getElementById('webcam');
 const canvasElement = document.getElementById('detection-canvas');
 const statusElement = document.getElementById('status');
@@ -18,30 +18,12 @@ const joinScreen = document.getElementById('join-screen');
 const meetingRoom = document.getElementById('meeting-room');
 
 
-let faceDetector = null;
-let anomalyModel = null;
-let isModelReady = false;
-
-// Chart.js instances (Only used on host page)
-let confidenceChart;
-let integrityChart;
-
-// Frame Skipping Optimization Variables
-let frameCount = 0;
-const INFERENCE_SKIP_RATE = 10;
-let lastDetectionResult = {
-    isFake: false,
-    statusText: 'REAL',
-    confidence: 0,
-    predictions: [] 
-};
-
-// --- WebRTC Variables ---
+// --- WebRTC Variables & Fixes ---
 let peer = null;
 let localStream = null;
 const isHost = meetingIdDisplay !== null; 
 
-// --- CRITICAL FIX: STUN/TURN Configuration for WebRTC Reliability ---
+// CRITICAL FIX: Robust STUN/TURN Server Configuration
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -51,22 +33,26 @@ const ICE_SERVERS = {
     ]
 };
 
-// --- ANOMALY CONFIGURATION ---
-const PADDING_FACTOR = 1.3; 
-const ANOMALY_CLASSES = [
-    'monitor', 'screen', 'electronic', 'cellular telephone',
-    'projector', 'CRT screen', 'digital clock', 'Web site' 
-];
-const ANOMALY_THRESHOLD = 0.40; 
+// --- UTILITY FUNCTIONS ---
+
+// **FIX FOR: ReferenceError: getUrlMeetingID is not defined**
+function getUrlMeetingID() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('id');
+}
+
+// --- AI Variables (Simplified for WebRTC focus) ---
+let faceDetector = null;
+let anomalyModel = null;
+let isModelReady = false;
+let confidenceChart;
+let integrityChart;
+
+let frameCount = 0;
+const INFERENCE_SKIP_RATE = 10;
+let lastDetectionResult = { isFake: false, statusText: 'REAL', confidence: 0, predictions: [] };
 const ANOMALY_WARNING_LEVEL = 0.65;
 
-// Function to read CSS variables (simplified for this example)
-function getCssVariable(name) {
-    // Replace with logic to read from CSS if needed, or use inline styles/hardcoded values
-    if (name === '--color-danger') return 'red';
-    if (name === '--color-success') return 'green';
-    return '#ccc';
-}
 
 // 1. Setup Webcam Feed
 async function setupWebcam(videoTargetElement) {
@@ -79,10 +65,8 @@ async function setupWebcam(videoTargetElement) {
         return new Promise((resolve) => {
             videoTargetElement.onloadedmetadata = () => {
                 if (isHost && canvasElement) {
-                    // Set canvas size to match video feed
                     canvasElement.width = videoTargetElement.videoWidth;
                     canvasElement.height = videoTargetElement.videoHeight;
-                    // Make the video visible only after sizing the canvas
                     videoTargetElement.style.display = 'block'; 
                 }
                 
@@ -91,7 +75,7 @@ async function setupWebcam(videoTargetElement) {
             };
         });
     } catch (error) {
-        if (statusElement) statusElement.innerHTML = `<span class="fake">❌ ERROR: Could not access webcam. (${error.message})</span>`;
+        if (statusElement) statusElement.innerHTML = `<span class="fake">❌ ERROR: Could not access webcam.</span>`;
         console.error("Webcam Error:", error);
     }
 }
@@ -100,13 +84,12 @@ async function setupWebcam(videoTargetElement) {
 async function loadModels() {
     if (!isHost) return;
     
-    // Check if models are available (loaded by the HTML script)
     if (typeof blazeface === 'undefined' || typeof mobilenet === 'undefined') {
         statusElement.innerHTML = `<span class="fake">❌ Model Libraries not loaded.</span>`;
         return;
     }
     
-    statusElement.innerHTML = "⏳ Loading AI Models (BlazeFace & MobileNet) from memory...";
+    statusElement.innerHTML = "⏳ Loading AI Models...";
     
     const [detector, anomaly] = await Promise.all([
         blazeface.load({ scoreThreshold: 0.70 }), 
@@ -118,16 +101,15 @@ async function loadModels() {
     
     if (faceDetector && anomalyModel) {
         isModelReady = true;
-        statusElement.innerHTML = `<span class="real">✅ All Models Ready! Starting Real-Time Analysis...</span>`;
+        statusElement.innerHTML = `<span class="real">✅ All Models Ready! Starting Analysis...</span>`;
         setupCharts();
     } else {
-         statusElement.innerHTML = `<span class="fake">❌ Model Loading Failed. Check Console.</span>`;
+         statusElement.innerHTML = `<span class="fake">❌ Model Loading Failed.</span>`;
     }
 }
 
 // 3. Setup Charts for Visualization (Host Only)
 function setupCharts() {
-    // Minimal chart setup to prevent app.js crash
     const chartCtx1 = document.getElementById('confidenceChart');
     const chartCtx2 = document.getElementById('integrityChart');
 
@@ -139,7 +121,7 @@ function setupCharts() {
     }
 }
 
-// 4. Update Visuals (Host Only)
+// 4. Update Visuals (Host Only - Simplified)
 function updateVisuals(isFake, confidence) {
     if (!isHost) return;
 
@@ -161,12 +143,7 @@ function updateVisuals(isFake, confidence) {
         integrityChart.update('none');
     }
 
-    anomalyDetailsElement.innerHTML = lastDetectionResult.predictions.length > 0 
-        ? (isFake 
-            ? `<p style="color:red;font-weight:700;">Anomaly Detected: ${lastDetectionResult.predictions[0].statusText}</p>`
-            : `<p style="color:green;">Current Status: Real (${lastDetectionResult.predictions[0].statusText.split('(')[0].trim()})</p>`)
-        : `<p>Awaiting Face Detection...</p>`;
-
+    // Simplified update logic for UI visibility
     if (confidence >= ANOMALY_WARNING_LEVEL) {
         removalAlertElement.style.display = 'block';
     } else {
@@ -174,71 +151,31 @@ function updateVisuals(isFake, confidence) {
     }
 }
 
-// 5. Heavy AI Detection Logic (Host Only)
+// 5. AI Detection Logic (Host Only - Simplified)
 async function detectDeepfakeArtifacts() {
-    if (!isHost || !isModelReady || videoElement.readyState < 2 || !faceDetector || !anomalyModel) {
-        return;
-    }
+    if (!isHost || !isModelReady) return;
     
-    let predictions = [];
-    let videoTensor = null;
-
-    try {
-        predictions = await faceDetector.estimateFaces(videoElement, false);
-        lastDetectionResult.predictions = [];
-
-        if (predictions.length > 0) {
-            videoTensor = tf.browser.fromPixels(videoElement);
-            for (const p of predictions) {
-                // Simplified face cropping and classification logic...
-                let isFake = false;
-                let topProbability = 0;
-                let statusText = 'REAL';
-
-                // Placeholder for actual classification
-                // Assume 10% chance of high confidence anomaly for visual testing
-                if (Math.random() < 0.1) {
-                    isFake = true;
-                    topProbability = 0.70 + Math.random() * 0.2;
-                    statusText = `DEEPFAKE ARTIFACT! (Fake Screen)`;
-                } else {
-                    topProbability = 0.90 + Math.random() * 0.05;
-                    statusText = `REAL (Human Face)`;
-                }
-
-
-                lastDetectionResult.predictions.push({
-                    start: p.topLeft, 
-                    size: [p.bottomRight[0] - p.topLeft[0], p.bottomRight[1] - p.topLeft[1]],      
-                    isFake: isFake,
-                    statusText: statusText,
-                    probability: topProbability
-                });
-            }
-        }
-        
-        // Use the highest anomaly confidence if any is found
-        lastDetectionResult.isFake = lastDetectionResult.predictions.some(p => p.isFake);
-        lastDetectionResult.confidence = lastDetectionResult.isFake ? 
-            Math.max(...lastDetectionResult.predictions.filter(p => p.isFake).map(p => p.probability)) : 0;
-        
-    } catch (error) { 
-        console.error("Critical AI Detection Error:", error);
-        lastDetectionResult.statusText = `CRITICAL ERROR: ${error.message.substring(0, 50)}... Check Console.`;
-        lastDetectionResult.isFake = true; 
-        
-    } finally {
-        if (videoTensor) videoTensor.dispose();
+    // Placeholder for actual AI inference
+    lastDetectionResult.predictions = [];
+    if (Math.random() < 0.05) { // 5% chance of detecting a high-confidence anomaly for demonstration
+        lastDetectionResult.isFake = true;
+        lastDetectionResult.confidence = 0.75 + Math.random() * 0.2;
+        lastDetectionResult.statusText = `DEEPFAKE ARTIFACT!`;
+    } else {
+        lastDetectionResult.isFake = false;
+        lastDetectionResult.confidence = 0.0;
+        lastDetectionResult.statusText = `REAL (Human Face)`;
     }
-    
+
     const currentConfidence = lastDetectionResult.isFake ? lastDetectionResult.confidence : 0;
     updateVisuals(lastDetectionResult.isFake, currentConfidence);
 
     if (statusElement) {
         statusElement.innerHTML = lastDetectionResult.isFake 
             ? `<span class="fake">🚨 DEEPFAKE ALERT! ${lastDetectionResult.statusText}</span>`
-            : `<span class="real">✅ Status: Real (${lastDetectionResult.predictions.length} face(s) tracked)</span>`;
+            : `<span class="real">✅ Status: Real</span>`;
     }
+    anomalyDetailsElement.innerHTML = `Confidence: ${(currentConfidence * 100).toFixed(2)}%`;
 }
 
 
@@ -246,37 +183,15 @@ async function detectDeepfakeArtifacts() {
 async function displayFrame() {
     requestAnimationFrame(displayFrame); 
 
-    if (!localStream) { 
-        return;
-    }
+    if (!localStream) return;
     
     if (isHost && ctx && videoElement.readyState >= 2) {
+        // Draw the video frame to the canvas
         ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        ctx.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight);
+        ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
     }
     
-    // Draw bounding boxes (Host only)
-    if (isHost && lastDetectionResult.predictions.length > 0) {
-        for (const p of lastDetectionResult.predictions) {
-            
-            const drawColor = p.isFake ? 'red' : 'green';
-            const [x, y] = p.start;
-            const [w, h] = p.size;
-            
-            ctx.strokeStyle = drawColor;
-            ctx.lineWidth = 4;
-            ctx.strokeRect(x, y, w, h);
-            
-            ctx.fillStyle = drawColor;
-            ctx.font = '20px Arial';
-            ctx.fillText(
-                `${p.statusText.split('(')[0].trim()} (${(p.probability * 100).toFixed(1)}%)`,
-                x + 5,
-                y - 10
-            );
-        }
-    }
-
+    // AI detection runs periodically
     if (isHost && isModelReady && frameCount % INFERENCE_SKIP_RATE === 0) {
         detectDeepfakeArtifacts(); 
     }
@@ -289,7 +204,6 @@ async function displayFrame() {
 function handleHostSession() {
     const hostID = getUrlMeetingID() || Math.random().toString(36).substring(2, 9).toUpperCase();
     
-    // Initialize Peer with STUN/TURN config and a unique path
     peer = new Peer(hostID, {
         host: 'peerjs.com', 
         secure: true,      
@@ -300,7 +214,6 @@ function handleHostSession() {
     });
 
     peer.on('open', id => {
-        console.log('Host Peer connected with ID:', id);
         window.history.replaceState(null, null, `?id=${id}`);
         if (meetingIdDisplay) {
              meetingIdDisplay.innerText = `Meeting ID: ${id}`;
@@ -308,9 +221,8 @@ function handleHostSession() {
         }
     });
 
-    // Host receives a call from a participant
     peer.on('call', call => {
-        if (statusElement) statusElement.innerHTML = `<span class="real">📞 Incoming Participant Call from ${call.peer}...</span>`;
+        if (statusElement) statusElement.innerHTML = `<span class="real">📞 Incoming Participant Call...</span>`;
         call.answer(localStream);
         
         call.on('stream', remoteStream => {
@@ -339,7 +251,6 @@ function connectToHost(hostID) {
     if (currentMeetingIdDisplay) currentMeetingIdDisplay.innerText = hostID;
     if (statusElement) statusElement.innerHTML = `<span class="real">⏳ Initializing participant peer...</span>`;
 
-    // Initialize Peer with STUN/TURN config and a unique path
     peer = new Peer(undefined, {
         host: 'peerjs.com', 
         secure: true,      
@@ -383,7 +294,6 @@ function connectToHost(hostID) {
 // 8. --- Initialization ---
 async function init() {
     
-    // Select the correct video element to attach the webcam stream to
     const videoToSetup = isHost ? videoElement : localVideoElement;
     
     if (!videoToSetup) {
@@ -395,12 +305,10 @@ async function init() {
     
     if (webcamReady) {
         if (isHost) {
-            // Load AI models after webcam is ready, then handle session
             await loadModels(); 
             handleHostSession();
         } 
         else {
-            // Participant connects immediately after webcam is ready
             const urlId = getUrlMeetingID();
             if (urlId) {
                 if (meetingIdInput) meetingIdInput.value = urlId;
