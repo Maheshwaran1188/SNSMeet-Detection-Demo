@@ -3,45 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Host Session - AI Monitoring Dashboard</title>
+    <title>Host Session - Video Meeting</title>
     <link rel="icon" href="https://github.com/favicon.ico" type="image/x-icon"> 
     <link rel="stylesheet" href="style.css"> 
 </head>
 <body>
     <div class="container host-layout">
         <header>
-            <h1>AI Deepfake Monitoring Dashboard</h1>
+            <h1 style="font-size: 1.5em;">Deepfake Analysis Meeting</h1>
             <p id="meeting-id-display">Meeting ID: --</p>
         </header>
 
-        <main class="main-content">
+        <main class="meeting-content">
             <div class="main-video-area">
-                <video id="webcam" autoplay playsinline muted></video>
-                <canvas id="detection-canvas"></canvas>
+                <video id="participant-video" autoplay playsinline></video>
+                <div class="video-label">Participant (Remote)</div>
             </div>
 
-            <div class="sidebar">
+            <div class="sidebar analysis-sidebar">
                 <h2>Real-Time Anomaly Status</h2>
                 <p id="status" class="status-message">Loading system...</p>
+                
+                <div class="local-analysis-preview">
+                    <h3>Your Local Feed (Analyzed)</h3>
+                    <video id="webcam" autoplay playsinline muted></video> 
+                    <canvas id="detection-canvas"></canvas> 
+                </div>
                 
                 <h3>Anomaly Details</h3>
                 <div id="anomaly-details">Awaiting initial stream analysis...</div>
                 
                 <div class="chart-container">
-                    <h3>Anomaly Confidence Trend</h3>
+                    <h4>Confidence Trend</h4>
                     <canvas id="confidenceChart"></canvas>
                 </div>
                 <div class="chart-container">
-                    <h3>Session Integrity Score</h3>
+                    <h4>Session Integrity Score</h4>
                     <canvas id="integrityChart"></canvas>
                 </div>
 
                 <div id="removal-alert" style="display:none;">
-                    <p>🚨 **CRITICAL DEEPFAKE ANOMALY DETECTED!**</p>
-                    <button>Force Disconnect Participant</button>
+                    <p class="fake" style="padding: 10px;">🚨 **CRITICAL DEEPFAKE ANOMALY DETECTED!**</p>
+                    <button class="cut-button" style="width: 100%; margin-top: 10px;">Force Disconnect Participant</button>
                 </div>
             </div>
         </main>
+        
+        <div class="local-preview">
+            <video id="localWebcam" autoplay playsinline muted></video> 
+            <p>Host (You)</p>
+        </div>
         
         <div class="call-controls-bar">
             <button id="muteButton" class="control-button">
@@ -54,19 +65,6 @@
                 📞 End Call
             </button>
         </div>
-        <section class="bottom-bar">
-            <h2>Active Participants</h2>
-            <div class="video-grid">
-                <div class="video-tile">
-                    <video id="participant-video" autoplay playsinline></video>
-                    <p>Participant 1 (Remote)</p>
-                </div>
-                <div class="video-tile">
-                    <p>Host (You)</p>
-                </div>
-            </div>
-        </section>
-        
         <div id="join-screen" style="display:none;"></div>
         <div id="meeting-room" style="display:block;"></div>
     </div>
