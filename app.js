@@ -23,7 +23,7 @@ let peer = null;
 let localStream = null;
 const isHost = meetingIdDisplay !== null; 
 
-// CRITICAL FIX: Robust STUN/TURN Server Configuration
+// CRITICAL FIX: Robust STUN/TURN Server Configuration for stability
 const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -67,7 +67,6 @@ async function setupWebcam(videoTargetElement) {
                 if (isHost && canvasElement) {
                     canvasElement.width = videoTargetElement.videoWidth;
                     canvasElement.height = videoTargetElement.videoHeight;
-                    // The video element is kept hidden in new UI, but we ensure its metadata loads
                 }
                 
                 videoTargetElement.play(); 
@@ -184,13 +183,11 @@ async function displayFrame() {
     if (!localStream) return;
     
     if (isHost && ctx && videoElement.readyState >= 2) {
-        // Draw the video frame to the canvas only if video is enabled
         if (isVideoEnabled) {
              ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
              ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
         } else {
              ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-             // Optionally draw a 'Video Off' message or image
         }
     }
     
@@ -247,7 +244,7 @@ function connectToHost(hostID) {
 
     if (joinScreen && meetingRoom) {
         joinScreen.style.display = 'none';
-        meetingRoom.style.display = 'flex'; // Use flex for the new layout
+        meetingRoom.style.display = 'flex'; 
     }
     
     if (currentMeetingIdDisplay) currentMeetingIdDisplay.innerText = hostID;
@@ -293,7 +290,7 @@ function connectToHost(hostID) {
 }
 
 
-// --- NEW CONTROL FUNCTIONS ---
+// --- FUNCTIONAL CONTROL BUTTONS ---
 let isVideoEnabled = true;
 let isAudioEnabled = true;
 
@@ -326,11 +323,9 @@ function toggleVideo() {
         button.classList.toggle('active', !isVideoEnabled);
     }
     
-    // Toggle canvas/video visibility
     if (isHost && canvasElement) {
         canvasElement.style.visibility = isVideoEnabled ? 'visible' : 'hidden';
     } else if (!isHost && localVideoElement) {
-        // Participant's local preview video
         localVideoElement.style.visibility = isVideoEnabled ? 'visible' : 'hidden';
     }
 }
@@ -351,7 +346,6 @@ function endCall() {
         statusElement.innerHTML = `<span class="fake">🛑 Call Ended. Disconnected from server.</span>`;
     }
 
-    // Attempt to return to the join screen logic
     if (joinScreen && meetingRoom) {
         joinScreen.style.display = 'block';
         meetingRoom.style.display = 'none';
@@ -396,7 +390,7 @@ async function init() {
         }
     }
     
-    // Add call control listeners (NEW)
+    // Add call control listeners
     document.getElementById('muteButton')?.addEventListener('click', toggleMute);
     document.getElementById('videoButton')?.addEventListener('click', toggleVideo);
     document.getElementById('cutButton')?.addEventListener('click', endCall);
