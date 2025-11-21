@@ -4,9 +4,9 @@ const canvasElement = document.getElementById('detection-canvas');
 const statusElement = document.getElementById('status');
 const anomalyDetailsElement = document.getElementById('anomaly-details');
 const removalAlertElement = document.getElementById('removal-alert');
-const ctx = canvasElement ? canvasElement.getContext('2d') : null; // Check if canvas exists
+const ctx = canvasElement ? canvasElement.getContext('2d') : null;
 
-let faceDetector = null; // Holds the BlazeFace model
+let faceDetector = null;
 let anomalyModel = null;
 let isModelReady = false;
 
@@ -24,17 +24,19 @@ let lastDetectionResult = {
     predictions: [] 
 };
 
-// --- WebRTC Variables (NEW) ---
+// --- WebRTC Variables ---
 let peer = null;
 let localStream = null;
-// Determine if we are the host based on the presence of host-specific elements
 const isHost = document.getElementById('confidenceChart') !== null;
-const meetingIdDisplay = document.getElementById('meeting-id-display'); // Host ID display
-const currentMeetingIdDisplay = document.getElementById('currentMeetingIdDisplay'); // Participant ID display
+// --- IMPORTANT: Meeting ID display elements ---
+const meetingIdDisplay = document.getElementById('meeting-id-display'); // Host ID display element
+const currentMeetingIdDisplay = document.getElementById('currentMeetingIdDisplay'); // Participant ID display element
+
 const joinButton = document.getElementById('joinButton');
 const meetingIdInput = document.getElementById('meetingIdInput');
 const joinScreen = document.getElementById('join-screen');
 const meetingRoom = document.getElementById('meeting-room');
+
 
 // --- CRITICAL FIX: STUN/TURN Configuration for WebRTC Reliability ---
 const ICE_SERVERS = {
@@ -49,17 +51,11 @@ const ICE_SERVERS = {
 // --- ANOMALY CONFIGURATION ---
 const PADDING_FACTOR = 1.3; 
 const ANOMALY_CLASSES = [
-    'monitor', 
-    'screen', 
-    'electronic', 
-    'cellular telephone',
-    'projector',
-    'CRT screen',
-    'digital clock',
-    'Web site' 
+    'monitor', 'screen', 'electronic', 'cellular telephone',
+    'projector', 'CRT screen', 'digital clock', 'Web site' 
 ];
 const ANOMALY_THRESHOLD = 0.40; 
-const ANOMALY_WARNING_LEVEL = 0.65; // High confidence to trigger removal alert (65%)
+const ANOMALY_WARNING_LEVEL = 0.65;
 
 // Function to read CSS variables for Chart.js
 function getCssVariable(name) {
@@ -71,12 +67,11 @@ async function setupWebcam(videoTargetElement) {
     if (statusElement) statusElement.innerHTML = "⏳ Requesting webcam access...";
     try {
         const stream = navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localStream = await stream; // Store the stream globally for WebRTC
+        localStream = await stream;
         videoTargetElement.srcObject = localStream;
 
         return new Promise((resolve) => {
             videoTargetElement.onloadedmetadata = () => {
-                // Ensure canvas matches video size if we are the host
                 if (isHost) {
                     videoTargetElement.width = videoTargetElement.videoWidth;
                     videoTargetElement.height = videoTargetElement.videoHeight;
@@ -94,10 +89,9 @@ async function setupWebcam(videoTargetElement) {
     }
 }
 
-// 2. Load Both AI Models (BlazeFace and MobileNet)
+// 2. Load Both AI Models (Host Only)
 async function loadModels() {
-    // Only load models on the host page
-    if (!isHost) return; 
+    if (!isHost) return;
 
     statusElement.innerHTML = "⏳ Loading AI Models (BlazeFace & MobileNet)...";
     
@@ -120,14 +114,13 @@ async function loadModels() {
     }
 }
 
-// 3. Setup Charts for Visualization
+// 3. Setup Charts for Visualization (Host Only)
 function setupCharts() {
-    // Read CSS variables
+    // ... Chart setup remains the same ...
     const colorDanger = getCssVariable('--color-danger');
     const colorSuccess = getCssVariable('--color-success');
     const colorDangerRgba = colorDanger.startsWith('rgb') ? colorDanger.replace(')', ', 0.2)').replace('rgb', 'rgba') : 'rgba(255, 51, 51, 0.2)';
 
-    // Confidence Chart (Line Chart)
     confidenceChart = new Chart(document.getElementById('confidenceChart'), {
         type: 'line',
         data: {
@@ -155,7 +148,6 @@ function setupCharts() {
         }
     });
 
-    // Integrity Chart (Doughnut Chart)
     integrityChart = new Chart(document.getElementById('integrityChart'), {
         type: 'doughnut',
         data: {
@@ -176,11 +168,11 @@ function setupCharts() {
     });
 }
 
-// 4. Update Charts and Alerts (Host Only)
+// 4. Update Visuals (Host Only)
 function updateVisuals(isFake, confidence) {
-    if (!isHost) return; 
+    if (!isHost) return;
 
-    // Update Confidence Chart
+    // ... Update chart and alert logic remains the same ...
     const maxDataPoints = 30;
     
     confidenceChart.data.labels.push(frameCount);
@@ -192,20 +184,17 @@ function updateVisuals(isFake, confidence) {
     }
     confidenceChart.update('none'); 
 
-    // Update Integrity Chart (Doughnut)
     const anomalyScore = Math.min(confidence * 100, 100);
     const realScore = 100 - anomalyScore;
     integrityChart.data.datasets[0].data = [realScore.toFixed(1), anomalyScore.toFixed(1)];
     integrityChart.update('none');
 
-    // Update Anomaly Details
     anomalyDetailsElement.innerHTML = lastDetectionResult.predictions.length > 0 
         ? (isFake 
             ? `<p style="color:${getCssVariable('--color-danger')};font-weight:700;">Anomaly Detected: ${lastDetectionResult.predictions[0].statusText}</p>`
             : `<p style="color:${getCssVariable('--color-success')};">Current Status: Real (${lastDetectionResult.predictions[0].statusText.split('(')[0].trim()})</p>`)
         : `<p>Awaiting Face Detection...</p>`;
 
-    // Check for Removal Alert
     if (confidence >= ANOMALY_WARNING_LEVEL) {
         removalAlertElement.style.display = 'block';
         removalAlertElement.querySelector('button').onclick = () => {
@@ -223,6 +212,7 @@ async function detectDeepfakeArtifacts() {
         return;
     }
     
+    // ... AI detection logic remains the same ...
     let predictions = [];
     let videoTensor = null;
 
@@ -237,13 +227,11 @@ async function detectDeepfakeArtifacts() {
                 const [xMin, yMin] = p.topLeft;
                 const [xMax, yMax] = p.bottomRight;
                 
-                // Calculate size and apply padding
                 const width = xMax - xMin;
                 const height = yMax - yMin;
                 const center = [(xMin + xMax) / 2, (yMin + yMax) / 2];
                 const size = Math.max(width, height) * PADDING_FACTOR; 
 
-                // Ensure crop coordinates stay within video bounds
                 const startX = Math.max(0, Math.floor(center[0] - size / 2));
                 const startY = Math.max(0, Math.floor(center[1] - size / 2));
                 const boxW = Math.min(videoElement.videoWidth - startX, Math.ceil(size));
@@ -254,17 +242,12 @@ async function detectDeepfakeArtifacts() {
                 let normalizedFace = null;
                 
                 try {
-                    // 1. Crop the tensor
                     croppedFace = tf.slice(videoTensor, [startY, startX, 0], [boxH, boxW, 3]);
-
-                    // 2. Resize and Normalize for MobileNet
                     resizedFace = tf.image.resizeBilinear(croppedFace, [224, 224], true);
                     normalizedFace = resizedFace.div(255);
                     
-                    // 3. Run the prediction
                     const classification = await anomalyModel.classify(normalizedFace); 
                     
-                    // --- Step 3: Analyze Result ---
                     const topPrediction = classification[0];
                     let isFake = false;
                     let statusText = 'REAL';
@@ -279,7 +262,6 @@ async function detectDeepfakeArtifacts() {
                         statusText = `REAL (${topPrediction.className.split(',')[0]})`;
                     }
 
-                    // Store the result
                     lastDetectionResult.predictions.push({
                         start: [startX, startY], 
                         size: [boxW, boxH],      
@@ -334,14 +316,12 @@ async function displayFrame() {
     if (!localStream || localStream.readyState < 2) { 
         return;
     }
-
-    // 1. Draw the current video frame onto the canvas (Host Only)
+    // ... Frame and bounding box drawing logic remains the same ...
     if (isHost && ctx && videoElement.readyState >= 2) {
         ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         ctx.drawImage(videoElement, 0, 0, videoElement.videoWidth, videoElement.videoHeight);
     }
     
-    // 2. Draw the Bounding Boxes and Text (Host Only)
     if (isHost && lastDetectionResult.predictions.length > 0) {
         for (const p of lastDetectionResult.predictions) {
             
@@ -361,7 +341,6 @@ async function displayFrame() {
         }
     }
 
-    // 3. Run the heavy detection logic periodically (Host Only)
     if (isHost && isModelReady && frameCount % INFERENCE_SKIP_RATE === 0) {
         detectDeepfakeArtifacts(); 
     }
@@ -379,7 +358,6 @@ function getUrlMeetingID() {
 function handleHostSession() {
     const hostID = getUrlMeetingID() || Math.random().toString(36).substring(2, 9).toUpperCase();
     
-    // Initialize Peer with STUN servers and high debug level
     peer = new Peer(hostID, {
         host: 'peerjs.com', 
         secure: true,      
@@ -391,7 +369,7 @@ function handleHostSession() {
 
     peer.on('open', id => {
         console.log('Host Peer connected with ID:', id);
-        // Update URL and display ID for participants
+        // --- UPDATED: Ensure meeting ID display is set on the host page ---
         window.history.replaceState(null, null, `?id=${id}`);
         if (meetingIdDisplay) {
              meetingIdDisplay.innerText = `Meeting ID: ${id}`;
@@ -405,11 +383,12 @@ function handleHostSession() {
         call.answer(localStream);
         
         call.on('stream', remoteStream => {
-            // Find a dedicated video element for the participant
+            // Find the video element for the participant
             const participantVideo = document.getElementById('participant-video');
             if(participantVideo) {
                 participantVideo.srcObject = remoteStream;
                 participantVideo.play();
+                console.log(`Received stream from Peer: ${call.peer}`);
             }
         });
     });
@@ -431,12 +410,13 @@ function connectToHost(hostID) {
         joinScreen.style.display = 'none';
         meetingRoom.style.display = 'block';
     }
+    
+    // --- UPDATED: Ensure meeting ID display is set on the participant page ---
     if (currentMeetingIdDisplay) {
          currentMeetingIdDisplay.innerText = hostID;
     }
     if (statusElement) statusElement.innerHTML = `<span class="real">⏳ Initializing participant peer...</span>`;
 
-    // Initialize Peer with STUN servers and high debug level
     peer = new Peer(undefined, {
         host: 'peerjs.com', 
         secure: true,      
@@ -470,7 +450,7 @@ function connectToHost(hostID) {
 
         call.on('error', err => {
             console.error("Call Error:", err);
-            alert("Meeting not found or the host session is inactive/closed. (ID must match the host's ID)"); // Display the user alert
+            alert("Meeting not found or the host session is inactive/closed. (ID must match the host's ID)"); 
             if (statusElement) statusElement.innerHTML = `<span class="fake">❌ Call Failed or Host Offline.</span>`;
             // Re-show join screen on failure
             if (joinScreen && meetingRoom) {
@@ -489,6 +469,7 @@ function connectToHost(hostID) {
 // 8. --- Initialization ---
 async function init() {
     
+    // Use localWebcam for participant page (if not host), otherwise use webcam
     const targetVideoElement = isHost ? videoElement : document.getElementById('localWebcam');
     if (!targetVideoElement) {
         console.error("Critical: Target video element not found.");
@@ -498,22 +479,17 @@ async function init() {
     await setupWebcam(targetVideoElement);
     
     if (localStream) {
-        // --- Host Initialization ---
         if (isHost) {
             handleHostSession();
-            await loadModels(); // Load AI models only on host
+            await loadModels();
         } 
-        
-        // --- Participant Initialization ---
         else {
-            // Check if ID is in URL (invite link)
             const urlId = getUrlMeetingID();
             if (urlId) {
                 if (meetingIdInput) meetingIdInput.value = urlId;
                 connectToHost(urlId);
             }
 
-            // Set up Join Button Listener
             if (joinButton && meetingIdInput) {
                 joinButton.addEventListener('click', () => {
                     const enteredId = meetingIdInput.value.trim();
@@ -523,7 +499,6 @@ async function init() {
         }
     }
     
-    // Start drawing loop regardless of host/participant status
     displayFrame();
 }
 
