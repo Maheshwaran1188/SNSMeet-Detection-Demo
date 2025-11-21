@@ -6,116 +6,6 @@
     <title>Securing Online Interactions</title>
     <link rel="icon" href="https://github.com/favicon.ico" type="image/x-icon"> 
     <link rel="stylesheet" href="style.css"> 
-    <style>
-        /* Specific styles for the index page to match the dark theme and layout */
-        .landing-container {
-            max-width: 800px;
-            margin: 80px auto;
-            padding: 40px;
-            background-color: var(--card-bg); /* Use the card background color */
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            text-align: center;
-        }
-        
-        .landing-container h1 {
-            color: var(--text-color-primary);
-            font-size: 2.2em;
-            margin-bottom: 10px;
-        }
-        
-        .landing-container p {
-            color: #b0b0b0;
-            font-size: 1.1em;
-            margin-bottom: 30px;
-        }
-
-        .status-badge {
-            display: inline-block;
-            background-color: var(--success-color);
-            color: var(--bg-color-dark);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-weight: bold;
-            margin-bottom: 25px;
-        }
-
-        .action-links {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 30px;
-            flex-wrap: wrap; 
-        }
-
-        .action-links a {
-            text-decoration: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 1.1em;
-            transition: background-color 0.3s, transform 0.2s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Host Button */
-        .host-button {
-            background-color: var(--accent-color);
-            color: var(--bg-color-dark);
-        }
-        .host-button:hover {
-            background-color: #009688; 
-            transform: translateY(-2px);
-        }
-
-        /* Join Button */
-        .join-button {
-            background-color: var(--bg-color-light);
-            color: var(--text-color-primary);
-            border: 2px solid var(--accent-color);
-        }
-        .join-button:hover {
-            background-color: #333;
-            transform: translateY(-2px);
-        }
-
-        /* Optional: Simulate Participant Invite box (from your previous UI) */
-        .invite-box {
-            background-color: var(--bg-color-light);
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 40px;
-            text-align: left; /* Adjust alignment within the box */
-        }
-        .invite-box h2 {
-            margin-top: 0;
-            color: var(--accent-color);
-        }
-        .invite-box input, .invite-box button {
-            padding: 10px;
-            margin: 5px 5px 5px 0;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            box-sizing: border-box;
-            display: inline-block;
-        }
-        .invite-box input {
-            background-color: var(--bg-color-dark);
-            color: var(--text-color-primary);
-            width: 60%; /* Adjust width for input */
-        }
-        .invite-box button {
-            background-color: var(--accent-color);
-            color: var(--bg-color-dark);
-            cursor: pointer;
-            width: 35%; /* Adjust width for button */
-        }
-        .invite-box p {
-            margin-top: 10px; 
-            font-size: 0.9em; 
-            color: #888;
-        }
-    </style>
 </head>
 <body>
     <div class="container">
@@ -124,7 +14,7 @@
             <p>Using **TensorFlow.js** to detect facial manipulation instantly.</p>
             
             <div class="status-badge">
-                ✅ Status: 1 face(s) tracked
+                ✅ Status: System Ready
             </div>
 
             <div class="action-links">
@@ -139,9 +29,9 @@
 
             <div class="invite-box">
                 <h2>👤 Invite Participants (Simulated)</h2>
-                <input type="text" placeholder="Enter participant name">
-                <button>Invite to Meet</button>
-                <p>Total Invited: 0</p>
+                <input type="text" placeholder="Enter meeting code to join">
+                <button>Connect</button>
+                <p>Status: Offline. Total Invited: 0</p>
             </div>
         </div>
     </div>
