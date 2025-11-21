@@ -1,171 +1,191 @@
-/* --- Global Variables --- */
-:root {
-    --color-background: #121212;
-    --color-surface: #1e1e1e;
-    --color-primary: #00bcd4; /* Cyan/Teal */
-    --color-primary-dark: #0097a7;
-    --color-secondary: #ffc107; /* Amber */
-    --color-text: #ffffff;
-    --color-success: #4caf50; /* Green */
-    --color-danger: #f44336; /* Red */
-    --dark-grey: #607d8b;
-}
-
 /* --- Base Styles --- */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: 'Montserrat', sans-serif;
+:root {
+    --bg-color-dark: #121212;
+    --bg-color-light: #1e1e1e;
+    --text-color-primary: #e0e0e0;
+    --accent-color: #03dac6; /* Teal accent for deepfake monitoring */
+    --danger-color: #cf6679; /* Red for alerts */
+    --success-color: #4CAF50; /* Green for real/success */
+    --card-bg: #212121;
+    --border-color: #333;
+    --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 body {
-    background-color: var(--color-background);
-    color: var(--color-text);
-    min-height: 100vh;
+    background-color: var(--bg-color-dark);
+    color: var(--text-color-primary);
+    font-family: var(--font-family);
+    margin: 0;
+    padding: 0;
 }
 
-/* --- Index.html Container --- */
 .container {
-    max-width: 900px;
-    margin: 50px auto;
+    max-width: 1400px;
+    margin: 0 auto;
     padding: 20px;
+}
+
+header {
     text-align: center;
+    padding-bottom: 20px;
 }
 
-h1 {
-    color: var(--color-primary);
-    margin-bottom: 10px;
-    font-size: 2.5em;
+/* --- Host Layout --- */
+.host-layout {
+    display: flex;
+    flex-direction: column;
 }
 
-p {
-    color: #bbb;
-    margin-bottom: 30px;
+.main-content {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
 }
 
-/* --- Video Area --- */
-.video-container {
+/* --- Left Side: Video & Detection --- */
+.main-video-area {
+    flex-grow: 1;
+    min-width: 60%;
     position: relative;
-    width: 100%;
-    max-width: 640px;
-    margin: 0 auto 20px;
-    border: 3px solid var(--color-surface);
-    border-radius: 12px;
+    background-color: var(--card-bg);
+    border-radius: 8px;
     overflow: hidden;
-    background-color: #000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.video-container video {
+#webcam, #detection-canvas {
     width: 100%;
     display: block;
 }
 
-/* --- Status Box --- */
-.status-box {
-    margin: 20px auto;
+#detection-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* --- Right Side: Sidebar Controls --- */
+.sidebar {
+    width: 350px;
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.sidebar h2 {
+    color: var(--accent-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+
+.status-message {
+    padding: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.real {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: var(--success-color);
+}
+
+.fake {
+    background-color: rgba(207, 102, 121, 0.2);
+    color: var(--danger-color);
+}
+
+#anomaly-details {
     padding: 15px;
-    background-color: var(--color-surface);
-    border-radius: 8px;
-    font-weight: 600;
-    color: #ddd;
-    max-width: 640px;
+    background-color: var(--bg-color-light);
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
 }
 
-.status-box .real { color: var(--color-success); }
-.status-box .fake { color: var(--color-danger); }
-
-/* --- Action Buttons --- */
-.action-buttons {
-    margin-top: 30px;
+/* --- Charts --- */
+.chart-container {
+    margin-bottom: 25px;
 }
-
-.button {
-    display: inline-block;
-    padding: 15px 30px;
-    margin: 10px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 700;
-    transition: background-color 0.3s;
+.chart-container h3 {
+    margin-top: 0;
     font-size: 1.1em;
+    color: var(--text-color-primary);
 }
 
-.button.primary {
-    background-color: var(--color-primary);
-    color: var(--color-background);
+/* --- Bottom Participants Bar --- */
+.bottom-bar {
+    width: 100%;
+    margin-top: 30px;
+    padding: 15px 0;
+    background-color: var(--card-bg);
+    border-radius: 8px;
 }
 
-.button.primary:hover {
-    background-color: var(--color-primary-dark);
+.bottom-bar h2 {
+    text-align: left;
+    margin: 0 0 10px 20px;
+    color: var(--accent-color);
 }
 
-.button.secondary {
-    background-color: var(--color-surface);
-    color: var(--color-text);
-    border: 1px solid #444;
+.video-grid {
+    display: flex;
+    gap: 15px;
+    padding: 0 20px;
+    overflow-x: auto;
 }
 
-.button.secondary:hover {
-    background-color: #2a2a2a;
+.video-tile {
+    width: 180px;
+    min-width: 180px;
+    height: 120px;
+    background-color: #333;
+    border-radius: 4px;
+    position: relative;
 }
 
-/* --- Meeting Controls Styling (for host.html and meeting.html) --- */
-.meeting-controls {
-    position: fixed;
+.video-tile video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.video-tile p {
+    position: absolute;
     bottom: 0;
     left: 0;
-    width: 100%;
-    background-color: var(--color-surface);
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between; 
-    align-items: center;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
-    z-index: 100;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 3px 6px;
+    margin: 0;
+    font-size: 0.8em;
+    border-top-right-radius: 4px;
 }
 
-.control-group {
-    display: flex;
-    gap: 10px; 
+/* --- Alert Box --- */
+#removal-alert {
+    padding: 15px;
+    background-color: var(--danger-color);
+    color: var(--bg-color-dark);
+    border-radius: 4px;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 20px;
 }
-
-.control-group button {
-    background-color: var(--color-primary-dark);
+#removal-alert button {
+    background-color: var(--bg-color-dark);
     color: white;
     border: none;
-    padding: 12px 15px;
-    border-radius: 8px;
+    padding: 8px 15px;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    margin-top: 10px;
+    transition: background-color 0.3s;
 }
-
-.control-group button:hover {
-    background-color: var(--color-primary);
-}
-
-.control-group button.end-call {
-    background-color: var(--color-danger);
-}
-.control-group button.end-call:hover {
-    background-color: #d32f2f; /* Darker red */
-}
-
-/* **Toggle States** */
-.control-group button.on {
-    background-color: var(--color-primary);
-    color: white;
-}
-
-.control-group button.off {
-    background-color: var(--dark-grey);
-    color: var(--color-text);
-}
-
-.control-group button.off i {
-    color: var(--color-danger); 
+#removal-alert button:hover {
+    background-color: #000;
 }
