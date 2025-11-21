@@ -56,15 +56,14 @@ header {
 }
 
 #webcam {
-    /* Hide the video element itself, only show canvas overlay */
-    display: none !important; 
+    /* Hidden, used only as source for canvas */
+    display: none; 
     width: 100%;
 }
 #detection-canvas {
     width: 100%;
     height: 100%;
     display: block;
-    /* Canvas overlay takes the place of the video */
     position: relative;
 }
 
@@ -120,6 +119,52 @@ header {
     margin-top: 0;
     font-size: 1.1em;
     color: var(--text-color-primary);
+}
+
+/* --- Call Controls Bar Styling (Fixes Visibility Issue) --- */
+.call-controls-bar {
+    width: 100%;
+    max-width: 600px;
+    margin: 20px auto 30px auto; /* Centers the bar horizontally */
+    display: flex; 
+    justify-content: space-around;
+    padding: 15px 20px;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.control-button {
+    background-color: var(--bg-color-light);
+    color: var(--text-color-primary);
+    border: 2px solid var(--bg-color-light);
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.control-button:hover {
+    background-color: #333;
+}
+
+.control-button.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-color);
+}
+
+.cut-button {
+    background-color: var(--danger-color);
+    color: var(--bg-color-dark);
+    font-weight: bold;
+    border: 2px solid var(--danger-color);
+}
+
+.cut-button:hover {
+    background-color: #a34e5d;
+    border-color: #a34e5d;
 }
 
 /* --- Bottom Participants Bar --- */
@@ -226,7 +271,7 @@ header {
     transition: background-color 0.3s;
 }
 .join-screen button:hover {
-    background-color: #009688; /* Slightly darker teal */
+    background-color: #009688; 
 }
 
 .meeting-room {
